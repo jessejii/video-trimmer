@@ -1,55 +1,195 @@
-# GPU优化视频剪辑工具
+# 视频处理工具集
 
-一个使用GPU加速的批量视频剪辑工具，可以快速去除视频开头和结尾的指定时间段。
+一套简单易用的 Python 视频处理脚本，支持批量视频合并和裁剪功能。
 
+## 功能特性
 
-## 安装依赖
+- **视频合并** (`merge_videos.py`)：自动读取文件夹中的所有视频，按名称排序后合并
+- **视频裁剪** (`trim_videos.py`)：批量裁剪视频开头和结尾
 
+## 环境要求
+
+- Python 3.6+
+- FFmpeg（需要添加到系统 PATH）
+
+### 安装 FFmpeg
+
+**Windows:**
 ```bash
-pip install -r requirements.txt
+# 使用 Chocolatey
+choco install ffmpeg
+
+# 或从官网下载: https://ffmpeg.org/download.html
 ```
 
-## 使用方法
+**macOS:**
+```bash
+brew install ffmpeg
+```
 
-1. 将要处理的视频文件放入 `video` 文件夹
-2. 运行脚本：
-   ```bash
-   python gpu_optimized_trim.py
-   ```
-3. 按提示输入要去掉的开头和结尾时间（秒）
-4. 确认设置后开始处理
-5. 处理完成的视频将保存在 `output` 文件夹中
+**Linux:**
+```bash
+sudo apt install ffmpeg  # Ubuntu/Debian
+sudo yum install ffmpeg  # CentOS/RHEL
+```
+
+## 使用说明
+
+### 1. 视频合并 (merge_videos.py)
+
+自动读取 `video` 文件夹中的所有视频文件，按文件名排序后合并为一个视频。
+
+#### 基本用法
+
+```bash
+# 合并 video 文件夹中的所有视频，输出到 out/output.mp4
+python merge_videos.py
+```
+
+#### 高级用法
+
+```bash
+# 指定输入文件夹
+python merge_videos.py my_videos
+
+# 指定输入文件夹和输出文件名
+python merge_videos.py my_videos merged.mp4
+```
+
+#### 文件夹结构
+
+```
+project/
+├── video/              # 输入文件夹
+│   ├── 1.mp4
+│   ├── 2.mp4
+│   └── 3.mp4
+└── out/                # 输出文件夹（自动创建）
+    └── output.mp4
+```
+
+#### 支持的视频格式
+
+- MP4, AVI, MOV, MKV, FLV, WMV, M4V, WEBM
+
+### 2. 视频裁剪 (trim_videos.py)
+
+批量裁剪 `video` 文件夹中的所有视频，去掉开头和结尾指定时长。
+
+#### 基本用法
+
+```bash
+# 去掉开头 60 秒，结尾 120 秒
+python trim_videos.py 60 120
+```
+
+#### 时间格式
+
+支持多种时间格式：
+
+```bash
+# 秒数格式
+python trim_videos.py 60 120
+
+# 分:秒 格式
+python trim_videos.py 1:30 2:00
+
+# 时:分:秒 格式
+python trim_videos.py 0:1:30 0:2:00
+```
+
+#### 高级用法
+
+```bash
+# 指定输入和输出文件夹
+python trim_videos.py 60 120 video trimmed
+```
+
+#### 文件夹结构
+
+```
+project/
+├── video/              # 输入文件夹
+│   ├── 1.mp4
+│   ├── 2.mp4
+│   └── 3.mp4
+└── trimmed/            # 输出文件夹（自动创建）
+    ├── 1.mp4
+    ├── 2.mp4
+    └── 3.mp4
+```
 
 ## 使用示例
 
-```
-🎬 GPU优化批量视频剪辑工具
-==================================================
-✅ ffmpeg和ffprobe可用
+### 场景 1：合并多个视频片段
 
-⚙️ 请设置剪辑参数：
-请输入要去掉的开头时间（秒）[默认: 29]: 30
-请输入要去掉的结尾时间（秒）[默认: 25]: 20
+```bash
+# 1. 将视频文件放入 video 文件夹，命名为 1.mp4, 2.mp4, 3.mp4
+# 2. 运行合并脚本
+python merge_videos.py
 
-📋 设置确认：
-   开头去掉：30.0 秒
-   结尾去掉：20.0 秒
-
-是否开始处理？(y/N): y
+# 3. 合并后的视频保存在 out/output.mp4
 ```
 
-## 文件结构
+### 场景 2：批量去除视频片头片尾
 
+```bash
+# 1. 将视频文件放入 video 文件夹
+# 2. 去掉开头 10 秒，结尾 5 秒
+python trim_videos.py 10 5
+
+# 3. 处理后的视频保存在 trimmed 文件夹
 ```
-├── video/                  # 输入视频文件夹
-├── output/                 # 输出视频文件夹
-├── gpu_optimized_trim.py   # 主程序
-├── requirements.txt        # 依赖包列表
-└── README.md              # 说明文件
+
+### 场景 3：先裁剪再合并
+
+```bash
+# 1. 裁剪视频
+python trim_videos.py 60 120
+
+# 2. 将裁剪后的视频从 trimmed 文件夹移动到 video 文件夹
+# 3. 合并视频
+python merge_videos.py
 ```
 
+## 技术说明
 
-## 技术细节
+### 视频合并原理
 
-- 使用 `h264_amf` 进行AMD GPU硬件编码(旧显卡需要替换ffmpeg,比如替换conda下bin的ffmpeg.exe: https://github.com/BtbN/FFmpeg-Builds/releases)
-- 使用 `libx264` 作为CPU编码备用方案
+使用 FFmpeg 的 concat demuxer 进行无损合并：
+- 创建临时文件列表 `list.txt`
+- 使用 `-c copy` 参数直接复制流，不重新编码
+- 合并速度快，无质量损失
+
+### 视频裁剪原理
+
+使用 FFmpeg 的时间裁剪功能：
+- 使用 `-ss` 参数指定开始时间
+- 使用 `-t` 参数指定持续时间
+- 使用 `-c copy` 参数避免重新编码
+- 自动获取视频时长并验证裁剪参数
+
+## 注意事项
+
+1. 视频文件名建议使用数字或字母顺序命名，以确保正确的合并顺序
+2. 合并的视频需要具有相同的编码格式、分辨率和帧率，否则可能出现问题
+3. 裁剪时间不能超过视频总时长
+4. 使用 `-c copy` 模式处理速度快但可能在某些情况下不够精确
+
+## 常见问题
+
+**Q: 提示找不到 ffmpeg？**
+
+A: 请确保已安装 FFmpeg 并添加到系统 PATH 环境变量。
+
+**Q: 合并后的视频播放有问题？**
+
+A: 确保所有视频具有相同的编码格式、分辨率和帧率。
+
+**Q: 裁剪不够精确？**
+
+A: 使用 `-c copy` 模式会在关键帧处裁剪，如需精确裁剪可以修改脚本去掉 `-c copy` 参数（但会重新编码，速度较慢）。
+
+## 许可证
+
+MIT License
