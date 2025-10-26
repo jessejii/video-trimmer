@@ -107,7 +107,7 @@ def get_video_files(folder='video'):
         print(f"错误: 文件夹 '{folder}' 不存在")
         return []
     
-    video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.webm')
+    video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.webm', '.ts')
     video_files = []
     
     for filename in os.listdir(folder):

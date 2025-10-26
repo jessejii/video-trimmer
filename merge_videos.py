@@ -18,7 +18,7 @@ def get_video_files(folder='video'):
         return []
     
     # 支持的视频格式
-    video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.webm')
+    video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.webm', '.ts')
     
     # 获取所有视频文件
     video_files = []
@@ -47,6 +47,9 @@ def merge_videos(video_files, output_file='output.mp4', list_file='list.txt'):
             print(f"错误: 文件 '{video}' 不存在")
             return False
     
+    # 检查是否为 .ts 文件
+    is_ts_format = video_files and video_files[0].lower().endswith('.ts')
+    
     # 创建文件列表
     try:
         with open(list_file, 'w', encoding='utf-8') as f:
@@ -58,7 +61,14 @@ def merge_videos(video_files, output_file='output.mp4', list_file='list.txt'):
         return False
     
     # 执行 ffmpeg 命令
-    cmd = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', list_file, '-c', 'copy', output_file]
+    # 对于 .ts 文件，使用 concat 协议更可靠
+    if is_ts_format:
+        # 使用 concat 协议直接合并 .ts 文件
+        concat_string = 'concat:' + '|'.join(video_files)
+        cmd = ['ffmpeg', '-i', concat_string, '-c', 'copy', output_file]
+    else:
+        # 其他格式使用 concat demuxer
+        cmd = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', list_file, '-c', 'copy', output_file]
     
     try:
         print(f"开始合并视频...")
