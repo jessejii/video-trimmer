@@ -33,7 +33,10 @@ def get_video_duration(video_path):
 def parse_time(time_str):
     """
     解析时间字符串为秒数
-    支持格式: "1:30", "90", "1:30:00"
+    支持格式: 
+      - "90" (秒)
+      - "1:30" (分:秒)
+      - "1:30:30" (时:分:秒)
     
     参数:
         time_str: 时间字符串
@@ -133,9 +136,21 @@ def trim_all_videos(input_folder='video', output_folder='trimmed', start_trim=0,
         print("未找到任何视频文件")
         return
     
+    def format_time(seconds):
+        """将秒数格式化为易读的时间"""
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        if h > 0:
+            return f"{h}小时{m}分{s}秒"
+        elif m > 0:
+            return f"{m}分{s}秒"
+        else:
+            return f"{s}秒"
+    
     print(f"\n找到 {len(video_files)} 个视频文件")
-    print(f"开头裁剪: {start_trim}秒")
-    print(f"结尾裁剪: {end_trim}秒\n")
+    print(f"开头裁剪: {format_time(start_trim)}")
+    print(f"结尾裁剪: {format_time(end_trim)}\n")
     
     success_count = 0
     
@@ -170,11 +185,16 @@ if __name__ == '__main__':
     
     if start_trim == 0 and end_trim == 0:
         print("用法:")
-        print("  python trim_videos.py <开头秒数> <结尾秒数> [输入文件夹] [输出文件夹]")
+        print("  python trim_videos.py <开头时间> <结尾时间> [输入文件夹] [输出文件夹]")
+        print("\n时间格式支持:")
+        print("  - 秒数: 90")
+        print("  - 分:秒: 1:30")
+        print("  - 时:分:秒: 1:30:30")
         print("\n示例:")
-        print("  python trim_videos.py 60 120          # 去掉开头1分钟，结尾2分钟")
-        print("  python trim_videos.py 1:30 2:00       # 去掉开头1分30秒，结尾2分钟")
-        print("  python trim_videos.py 10 10 video trimmed  # 指定输入输出文件夹")
+        print("  python trim_videos.py 60 120              # 去掉开头60秒，结尾120秒")
+        print("  python trim_videos.py 1:30 2:00           # 去掉开头1分30秒，结尾2分钟")
+        print("  python trim_videos.py 1:30:30 0:45:00     # 去掉开头1小时30分30秒，结尾45分钟")
+        print("  python trim_videos.py 10 10 video trimmed # 指定输入输出文件夹")
         sys.exit(1)
     
     trim_all_videos(input_folder, output_folder, start_trim, end_trim)

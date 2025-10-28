@@ -85,17 +85,23 @@ python trim_videos.py 60 120
 
 #### 时间格式
 
-支持多种时间格式：
+支持多种时间格式输入：
+
+| 格式 | 示例 | 说明 |
+|------|------|------|
+| 秒数 | `90` | 90秒 |
+| 分:秒 | `1:30` | 1分30秒 |
+| 时:分:秒 | `1:30:30` | 1小时30分30秒 |
 
 ```bash
 # 秒数格式
 python trim_videos.py 60 120
 
-# 分:秒 格式
+# 分:秒 格式（去掉开头1分30秒，结尾2分钟）
 python trim_videos.py 1:30 2:00
 
-# 时:分:秒 格式
-python trim_videos.py 0:1:30 0:2:00
+# 时:分:秒 格式（去掉开头1小时30分30秒，结尾45分钟）
+python trim_videos.py 1:30:30 0:45:00
 ```
 
 #### 高级用法
@@ -138,14 +144,17 @@ python merge_videos.py
 # 2. 去掉开头 10 秒，结尾 5 秒
 python trim_videos.py 10 5
 
+# 或使用时分秒格式：去掉开头1分钟，结尾30秒
+python trim_videos.py 1:00 30
+
 # 3. 处理后的视频保存在 trimmed 文件夹
 ```
 
 ### 场景 3：先裁剪再合并
 
 ```bash
-# 1. 裁剪视频
-python trim_videos.py 60 120
+# 1. 裁剪视频（去掉开头1分钟，结尾2分钟）
+python trim_videos.py 1:00 2:00
 
 # 2. 将裁剪后的视频从 trimmed 文件夹移动到 video 文件夹
 # 3. 合并视频

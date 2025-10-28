@@ -1,25 +1,43 @@
 @echo off
-chcp 65001 >nul
-setlocal
 
-REM 检查参数
-if "%~1"=="" (
-    echo 用法: trim_videos.bat ^<开头秒数^> ^<结尾秒数^> [输入文件夹] [输出文件夹]
+cls
+echo.
+echo ========================================
+echo      Video Batch Trimming Tool
+echo ========================================
+echo.
+echo Time format support:
+echo   - Seconds: 90
+echo   - Min:Sec: 1:30
+echo   - Hour:Min:Sec: 1:30:30
+echo.
+echo ========================================
+echo.
+
+REM Interactive input
+set /p START_TIME=Enter start trim time (e.g. 1:30): 
+set /p END_TIME=Enter end trim time (e.g. 2:00): 
+
+if "%START_TIME%"=="" (
     echo.
-    echo 示例:
-    echo   trim_videos.bat 60 120
-    echo   trim_videos.bat 1:30 2:00
-    echo   trim_videos.bat 10 10 video trimmed
+    echo Error: Start time cannot be empty
+    pause
     exit /b 1
 )
 
-if "%~2"=="" (
-    echo 错误: 请提供结尾秒数
-    echo 用法: trim_videos.bat ^<开头秒数^> ^<结尾秒数^> [输入文件夹] [输出文件夹]
+if "%END_TIME%"=="" (
+    echo.
+    echo Error: End time cannot be empty
+    pause
     exit /b 1
 )
 
-REM 调用 Python 脚本
-python trim_videos.py %*
+echo.
+echo Processing...
+echo.
 
-endlocal
+REM Call Python script
+python trim_videos.py "%START_TIME%" "%END_TIME%"
+
+echo.
+pause
