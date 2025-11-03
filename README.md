@@ -1,259 +1,199 @@
 # 视频处理工具集
 
-一套简单易用的 Python 视频处理脚本，支持批量视频合并和裁剪功能。
+这是一个基于 FFmpeg 的视频处理工具集，提供了多种常用的视频编辑功能，包括格式转换、合并、裁剪、片段删除和字幕转换等。
 
 ## 功能特性
 
-- **视频合并** (`merge_videos.py`)：自动读取文件夹中的所有视频，按名称排序后合并
-- **视频裁剪** (`trim_videos.py`)：批量裁剪视频开头和结尾
-- **删除视频片段** (`remove_segments.py`)：删除视频中的指定时间段，保留其余部分并自动合并
+- 🎬 **视频格式转换** - 将各种视频格式转换为 MP4
+- 🔗 **视频合并** - 将多个视频文件合并为一个
+- ✂️ **视频裁剪** - 批量去除视频开头和结尾
+- 🗑️ **片段删除** - 删除视频中的指定时间段
+- 📝 **字幕转换** - SRT 字幕转换为 ASS 格式
 
-## 环境要求
+## 系统要求
 
 - Python 3.6+
-- FFmpeg（需要添加到系统 PATH）
+- FFmpeg (必须安装并添加到系统 PATH)
 
-### 安装 FFmpeg
+### FFmpeg 安装
 
 **Windows:**
-```bash
-# 使用 Chocolatey
-choco install ffmpeg
+1. 从 [FFmpeg 官网](https://ffmpeg.org/download.html) 下载
+2. 解压到任意目录
+3. 将 bin 目录添加到系统 PATH 环境变量
 
-# 或从官网下载: https://ffmpeg.org/download.html
+**验证安装:**
+```bash
+ffmpeg -version
 ```
 
-**macOS:**
+## 工具说明
+
+### 1. 视频格式转换 (convert_to_mp4)
+
+将各种视频格式转换为 MP4 格式。
+
+**使用方法:**
+- 双击 `convert_to_mp4.bat` 启动交互式界面
+- 支持拖拽文件到窗口
+- 提供快速模式和重新编码两种选项
+
+**支持格式:** AVI, MKV, MOV, FLV, WMV, WEBM 等
+
+### 2. 视频合并 (merge_videos)
+
+将多个视频文件按文件名顺序合并为一个文件。
+
+**使用方法:**
+
+**交互式:**
 ```bash
-brew install ffmpeg
-```
+# 双击运行
+merge_videos.bat
 
-**Linux:**
-```bash
-sudo apt install ffmpeg  # Ubuntu/Debian
-sudo yum install ffmpeg  # CentOS/RHEL
-```
-
-## 使用说明
-
-### 1. 视频合并 (merge_videos.py)
-
-自动读取 `video` 文件夹中的所有视频文件，按文件名排序后合并为一个视频。
-
-#### 基本用法
-
-```bash
-# 合并 video 文件夹中的所有视频，输出到 out/output.mp4
+# 或直接运行 Python 脚本
 python merge_videos.py
 ```
 
-#### 高级用法
+**功能特点:**
+- 自动按文件名排序
+- 使用 FFmpeg concat demuxer 快速合并
+- 不重新编码，保持原始质量
+- 输出文件名: `merged_output.mp4`
 
+### 3. 视频裁剪 (trim_videos)
+
+批量去除视频开头和结尾的指定时长。
+
+**使用方法:**
+
+**交互式:**
 ```bash
-# 指定输入文件夹
-python merge_videos.py my_videos
-
-# 指定输入文件夹和输出文件名
-python merge_videos.py my_videos merged.mp4
+trim_videos.bat
 ```
 
-#### 文件夹结构
-
-```
-project/
-├── video/              # 输入文件夹
-│   ├── 1.mp4
-│   ├── 2.mp4
-│   └── 3.mp4
-└── out/                # 输出文件夹（自动创建）
-    └── output.mp4
-```
-
-#### 支持的视频格式
-
-- MP4, AVI, MOV, MKV, FLV, WMV, M4V, WEBM
-
-### 2. 删除视频片段 (remove_segments.py)
-
-删除视频中的指定时间段，保留其余部分并自动合并成新视频。适合删除广告、不需要的片段等。
-
-#### 基本用法
-
+**命令行:**
 ```bash
-# 删除 1:00-2:00 和 5:00-6:00 两个时间段
-python remove_segments.py video.mp4 "1:00-2:00,5:00-6:00"
-
-# 指定输出文件
-python remove_segments.py video.mp4 "1:00-2:00,5:00-6:00" output.mp4
+python trim_videos.py <开头时间> <结尾时间> [输入文件夹] [输出文件夹]
 ```
 
-#### 时间段格式
+**时间格式:**
+- 秒数: `90`
+- 分:秒: `1:30`
+- 时:分:秒: `1:30:30`
+- 不裁剪: 留空或输入 `""`
 
-- 使用逗号分隔多个时间段：`"1:00-2:00,5:00-6:00"`
-- 每个时间段使用连字符连接开始和结束时间：`"开始-结束"`
-- 时间格式支持：`HH:MM:SS`、`MM:SS`、`SS`
-
-#### 示例
-
+**示例:**
 ```bash
-# 删除开头1分钟的片头
-python remove_segments.py video.mp4 "0:00-1:00"
-
-# 删除多个广告片段
-python remove_segments.py movie.mp4 "5:30-7:00,15:20-17:45,45:00-47:30"
-
-# 使用秒数格式（删除 60-120 秒和 300-360 秒）
-python remove_segments.py video.mp4 "60-120,300-360"
-```
-
-#### 工作原理
-
-1. 解析要删除的时间段
-2. 计算要保留的时间段
-3. 提取每个保留片段到临时文件
-4. 合并所有保留片段为最终视频
-5. 自动清理临时文件
-
-### 3. 视频裁剪 (trim_videos.py)
-
-批量裁剪 `video` 文件夹中的所有视频，去掉开头和结尾指定时长。
-
-#### 基本用法
-
-```bash
-# 去掉开头 60 秒，结尾 120 秒
-python trim_videos.py 60 120
-```
-
-#### 时间格式
-
-支持多种时间格式输入：
-
-| 格式 | 示例 | 说明 |
-|------|------|------|
-| 秒数 | `90` | 90秒 |
-| 分:秒 | `1:30` | 1分30秒 |
-| 时:分:秒 | `1:30:30` | 1小时30分30秒 |
-
-```bash
-# 秒数格式
+# 去掉开头60秒，结尾120秒
 python trim_videos.py 60 120
 
-# 分:秒 格式（去掉开头1分30秒，结尾2分钟）
+# 去掉开头1分30秒，结尾2分钟
 python trim_videos.py 1:30 2:00
 
-# 时:分:秒 格式（去掉开头1小时30分30秒，结尾45分钟）
-python trim_videos.py 1:30:30 0:45:00
+# 只去掉开头60秒
+python trim_videos.py 60 ""
+
+# 指定输入输出文件夹
+python trim_videos.py 10 10 video trimmed
 ```
 
-#### 高级用法
+### 4. 片段删除 (remove_segments)
 
+删除视频中的指定时间段，保留其余部分并自动合并。
+
+**使用方法:**
+
+**交互式:**
 ```bash
-# 指定输入和输出文件夹
-python trim_videos.py 60 120 video trimmed
+remove_segments.bat
 ```
 
-#### 文件夹结构
-
-```
-project/
-├── video/              # 输入文件夹
-│   ├── 1.mp4
-│   ├── 2.mp4
-│   └── 3.mp4
-└── trimmed/            # 输出文件夹（自动创建）
-    ├── 1.mp4
-    ├── 2.mp4
-    └── 3.mp4
-```
-
-## 使用示例
-
-### 场景 1：合并多个视频片段
-
+**命令行:**
 ```bash
-# 1. 将视频文件放入 video 文件夹，命名为 1.mp4, 2.mp4, 3.mp4
-# 2. 运行合并脚本
-python merge_videos.py
+# 处理单个文件
+python remove_segments.py <视频文件> "<删除时间段>"
 
-# 3. 合并后的视频保存在 out/output.mp4
+# 批量处理文件夹
+python remove_segments.py <文件夹> "<删除时间段>" [输出文件夹]
 ```
 
-### 场景 2：批量去除视频片头片尾
+**时间段格式:**
+- 单个时间段: `1:00-2:00`
+- 多个时间段: `1:00-2:00,5:00-6:00`
+- 支持的时间格式: `HH:MM:SS`, `MM:SS`, `SS`
 
+**示例:**
 ```bash
-# 1. 将视频文件放入 video 文件夹
-# 2. 去掉开头 10 秒，结尾 5 秒
-python trim_videos.py 10 5
-
-# 或使用时分秒格式：去掉开头1分钟，结尾30秒
-python trim_videos.py 1:00 30
-
-# 3. 处理后的视频保存在 trimmed 文件夹
-```
-
-### 场景 3：删除视频中的多个时间段
-
-```bash
-# 删除 1:00-2:00 和 5:00-6:00 两个时间段
+# 删除1-2分钟和5-6分钟的内容
 python remove_segments.py video.mp4 "1:00-2:00,5:00-6:00"
 
-# 指定输出文件名
-python remove_segments.py video.mp4 "1:00-2:00,5:00-6:00" out/edited.mp4
-
-# 删除多个片段（例如删除广告）
-python remove_segments.py movie.mp4 "10:30-12:00,45:00-47:30,1:20:00-1:22:00"
+# 批量处理文件夹
+python remove_segments.py video_folder "1:00-2:00,5:00-6:00" output_folder
 ```
 
-### 场景 4：先裁剪再合并
+### 5. 字幕转换 (srt_to_ass)
 
+将 SRT 格式字幕转换为 ASS 格式。
+
+**使用方法:**
+
+**交互式:**
 ```bash
-# 1. 裁剪视频（去掉开头1分钟，结尾2分钟）
-python trim_videos.py 1:00 2:00
-
-# 2. 将裁剪后的视频从 trimmed 文件夹移动到 video 文件夹
-# 3. 合并视频
-python merge_videos.py
+srt_to_ass.bat
 ```
 
-## 技术说明
+**命令行:**
+```bash
+python srt_to_ass.py <srt文件路径>
+```
 
-### 视频合并原理
+**功能特点:**
+- 自动检测文件编码 (UTF-8, GBK)
+- 保持时间轴精度
+- 生成标准 ASS 格式文件
+- 输出文件与输入文件同名，扩展名为 `.ass`
 
-使用 FFmpeg 的 concat demuxer 进行无损合并：
-- 创建临时文件列表 `list.txt`
-- 使用 `-c copy` 参数直接复制流，不重新编码
-- 合并速度快，无质量损失
+## 文件结构
 
-### 视频裁剪原理
+```
+├── convert_to_mp4.bat      # 视频格式转换 (批处理)
+├── merge_videos.bat        # 视频合并 (批处理)
+├── merge_videos.py         # 视频合并 (Python脚本)
+├── remove_segments.bat     # 片段删除 (批处理)
+├── remove_segments.py      # 片段删除 (Python脚本)
+├── srt_to_ass.bat         # 字幕转换 (批处理)
+├── srt_to_ass.py          # 字幕转换 (Python脚本)
+├── trim_videos.bat        # 视频裁剪 (批处理)
+├── trim_videos.py         # 视频裁剪 (Python脚本)
+├── requirements.txt       # Python依赖 (当前为空)
+└── README.md             # 使用说明
+```
 
-使用 FFmpeg 的时间裁剪功能：
-- 使用 `-ss` 参数指定开始时间
-- 使用 `-t` 参数指定持续时间
-- 使用 `-c copy` 参数避免重新编码
-- 自动获取视频时长并验证裁剪参数
+## 使用建议
+
+1. **批处理文件 (.bat)** - 适合不熟悉命令行的用户，提供交互式界面
+2. **Python 脚本 (.py)** - 适合需要自动化或批量处理的用户
+3. **文件夹结构** - 建议创建 `video` 文件夹存放原始视频，`trimmed` 等文件夹存放处理结果
 
 ## 注意事项
 
-1. 视频文件名建议使用数字或字母顺序命名，以确保正确的合并顺序
-2. 合并的视频需要具有相同的编码格式、分辨率和帧率，否则可能出现问题
-3. 裁剪时间不能超过视频总时长
-4. 使用 `-c copy` 模式处理速度快但可能在某些情况下不够精确
+- 确保 FFmpeg 已正确安装并添加到 PATH
+- 处理大文件时请确保有足够的磁盘空间
+- 建议在处理前备份重要视频文件
+- 某些操作会生成临时文件，处理完成后会自动清理
 
 ## 常见问题
 
 **Q: 提示找不到 ffmpeg？**
+A: 请确保已安装 FFmpeg 并添加到系统 PATH 环境变量
 
-A: 请确保已安装 FFmpeg 并添加到系统 PATH 环境变量。
+**Q: 视频合并后音视频不同步？**
+A: 确保所有视频文件具有相同的编码格式和参数
 
-**Q: 合并后的视频播放有问题？**
-
-A: 确保所有视频具有相同的编码格式、分辨率和帧率。
-
-**Q: 裁剪不够精确？**
-
-A: 使用 `-c copy` 模式会在关键帧处裁剪，如需精确裁剪可以修改脚本去掉 `-c copy` 参数（但会重新编码，速度较慢）。
+**Q: 字幕转换后中文显示乱码？**
+A: 脚本会自动尝试 UTF-8 和 GBK 编码，如仍有问题请检查原始 SRT 文件编码
 
 ## 许可证
 
-MIT License
+本项目仅供学习和个人使用。
