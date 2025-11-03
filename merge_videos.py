@@ -1,121 +1,112 @@
 import os
-import sys
 import subprocess
-import platform
+import sys
 
-def get_video_files(folder='video'):
-    """
-    从指定文件夹获取所有视频文件并按名称排序
+def get_video_files(directory):
+    """获取目录中的所有视频文件并按名称排序"""
+    video_extensions = ('.mp4', '.avi', '.mkv', '.mov', '.flv', '.wmv', '.webm')
+    files = []
     
-    参数:
-        folder: 视频文件夹路径，默认为 'video'
-    
-    返回:
-        排序后的视频文件路径列表
-    """
-    if not os.path.exists(folder):
-        print(f"错误: 文件夹 '{folder}' 不存在")
-        return []
-    
-    # 支持的视频格式
-    video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.webm', '.ts')
-    
-    # 获取所有视频文件
-    video_files = []
-    for filename in os.listdir(folder):
-        if filename.lower().endswith(video_extensions):
-            video_files.append(os.path.join(folder, filename))
+    for file in os.listdir(directory):
+        if file.lower().endswith(video_extensions):
+            files.append(file)
     
     # 按文件名排序
-    video_files.sort()
-    
-    return video_files
+    files.sort()
+    return files
 
-def merge_videos(video_files, output_file='output.mp4', list_file='list.txt'):
-    """
-    合并多个视频文件
+def merge_videos_ffmpeg(directory):
+    """使用 ffmpeg concat demuxer 快速合并视频"""
+    video_files = get_video_files(directory)
     
-    参数:
-        video_files: 视频文件列表，例如 ['1.mp4', '2.mp4']
-        output_file: 输出文件名，默认为 'output.mp4'
-        list_file: 临时列表文件名，默认为 'list.txt'
-    """
+    if len(video_files) == 0:
+        print("错误：目录中没有找到视频文件")
+        return False
     
-    # 检查视频文件是否存在
-    for video in video_files:
-        if not os.path.exists(video):
-            print(f"错误: 文件 '{video}' 不存在")
-            return False
+    if len(video_files) == 1:
+        print("警告：只找到一个视频文件，无需合并")
+        return False
     
-    # 检查是否为 .ts 文件
-    is_ts_format = video_files and video_files[0].lower().endswith('.ts')
+    print(f"找到 {len(video_files)} 个视频文件：")
+    for i, file in enumerate(video_files, 1):
+        print(f"  {i}. {file}")
     
-    # 创建文件列表
+    # 创建临时文件列表
+    list_file = os.path.join(directory, "filelist.txt")
     try:
         with open(list_file, 'w', encoding='utf-8') as f:
             for video in video_files:
-                f.write(f"file '{video}'\n")
-        print(f"已创建文件列表: {list_file}")
+                # 使用相对路径，并转义特殊字符
+                video_path = os.path.join(directory, video)
+                # ffmpeg concat 格式要求
+                f.write(f"file '{video_path}'\n")
+        
+        # 输出文件路径
+        output_file = os.path.join(directory, "merged_output.mp4")
+        
+        # 如果输出文件已存在，询问是否覆盖
+        if os.path.exists(output_file):
+            response = input(f"\n输出文件 '{output_file}' 已存在，是否覆盖？(y/n): ")
+            if response.lower() != 'y':
+                print("操作已取消")
+                os.remove(list_file)
+                return False
+        
+        print(f"\n开始合并视频到：{output_file}")
+        print("使用 ffmpeg 快速合并模式（concat demuxer）...")
+        
+        # 使用 ffmpeg concat demuxer 进行快速合并
+        cmd = [
+            'ffmpeg',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', list_file,
+            '-c', 'copy',  # 直接复制流，不重新编码
+            '-y',  # 覆盖输出文件
+            output_file
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # 删除临时文件列表
+        os.remove(list_file)
+        
+        if result.returncode == 0:
+            print(f"\n✓ 合并成功！输出文件：{output_file}")
+            return True
+        else:
+            print(f"\n✗ 合并失败")
+            print(f"错误信息：{result.stderr}")
+            return False
+            
     except Exception as e:
-        print(f"创建文件列表失败: {e}")
-        return False
-    
-    # 执行 ffmpeg 命令
-    # 对于 .ts 文件，使用 concat 协议更可靠
-    if is_ts_format:
-        # 使用 concat 协议直接合并 .ts 文件
-        concat_string = 'concat:' + '|'.join(video_files)
-        cmd = ['ffmpeg', '-i', concat_string, '-c', 'copy', output_file]
-    else:
-        # 其他格式使用 concat demuxer
-        cmd = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', list_file, '-c', 'copy', output_file]
-    
-    try:
-        print(f"开始合并视频...")
-        print(f"执行命令: {' '.join(cmd)}")
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        print(f"视频合并成功! 输出文件: {output_file}")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"视频合并失败: {e}")
-        print(f"错误信息: {e.stderr}")
-        return False
-    except FileNotFoundError:
-        print("错误: 未找到 ffmpeg，请确保已安装 ffmpeg 并添加到系统 PATH")
-        return False
-    finally:
-        # 清理临时文件
+        print(f"发生错误：{str(e)}")
         if os.path.exists(list_file):
             os.remove(list_file)
-            print(f"已删除临时文件: {list_file}")
+        return False
 
-if __name__ == '__main__':
-    # 从 video 文件夹读取所有视频文件
-    folder = 'video'
-    output_folder = 'out'
-    output = os.path.join(output_folder, 'output.mp4')
+def main():
+    print("=" * 60)
+    print("视频合并工具 - FFmpeg 快速合并模式")
+    print("=" * 60)
     
-    # 支持命令行参数指定文件夹
-    if len(sys.argv) > 1:
-        folder = sys.argv[1]
-    if len(sys.argv) > 2:
-        output = os.path.join(output_folder, sys.argv[2])
+    # 获取用户输入的路径
+    directory = input("\n请输入包含视频文件的文件夹路径：").strip()
     
-    # 创建输出文件夹
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-        print(f"已创建输出文件夹: {output_folder}")
+    # 移除路径两端的引号（如果有）
+    directory = directory.strip('"').strip("'")
     
-    print(f"正在扫描文件夹: {folder}")
-    video_files = get_video_files(folder)
+    # 检查路径是否存在
+    if not os.path.exists(directory):
+        print(f"错误：路径不存在 - {directory}")
+        return
     
-    if not video_files:
-        print("未找到任何视频文件")
-        sys.exit(1)
+    if not os.path.isdir(directory):
+        print(f"错误：路径不是一个文件夹 - {directory}")
+        return
     
-    print(f"\n找到 {len(video_files)} 个视频文件:")
-    for i, video in enumerate(video_files, 1):
-        print(f"  {i}. {video}")
-    
-    print(f"\n输出文件: {output}")
-    merge_videos(video_files, output)
+    # 执行合并
+    merge_videos_ffmpeg(directory)
+
+if __name__ == "__main__":
+    main()
