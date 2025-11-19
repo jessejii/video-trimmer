@@ -1,10 +1,6 @@
 @echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
-echo ====================================
-echo 视频片段删除工具
-echo ====================================
-echo.
 
 REM 如果有命令行参数，直接执行
 if not "%~1"=="" (
@@ -14,7 +10,13 @@ if not "%~1"=="" (
     exit /b
 )
 
-REM 交互式模式
+REM 交互式模式 - 主循环
+:start
+cls
+echo ====================================
+echo 视频片段删除工具
+echo ====================================
+echo.
 echo 支持处理单个文件或整个文件夹
 echo 提示: 可以直接拖拽文件或文件夹到此窗口
 echo.
@@ -108,4 +110,6 @@ if errorlevel 1 (
 )
 
 echo.
-pause
+echo 按回车键继续处理下一个文件，或关闭窗口退出...
+pause >nul
+goto start

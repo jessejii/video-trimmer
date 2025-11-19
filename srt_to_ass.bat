@@ -33,6 +33,9 @@ echo.
 if defined first_run (
     pause
     exit /b 0
+) else (
+    echo 按任意键返回开始...
+    pause >nul
 )
 
 set srt_file=

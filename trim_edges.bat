@@ -1,10 +1,6 @@
 @echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
-echo ====================================
-echo 视频开头结尾裁剪工具
-echo ====================================
-echo.
 
 REM 如果有命令行参数，直接执行
 if not "%~1"=="" (
@@ -14,7 +10,13 @@ if not "%~1"=="" (
     exit /b
 )
 
-REM 交互式模式
+REM 交互式模式 - 主循环
+:main_loop
+cls
+echo ====================================
+echo 视频开头结尾裁剪工具
+echo ====================================
+echo.
 echo 支持处理单个文件或整个文件夹
 echo 提示: 可以直接拖拽文件或文件夹到此窗口
 echo.
@@ -38,8 +40,8 @@ if exist "!input_path!" (
 )
 
 REM 如果路径不存在，尝试相对路径
-if exist "!cd!\!input_path!" (
-    set "input_path=!cd!\!input_path!"
+if exist "%cd%\!input_path!" (
+    set "input_path=%cd%\!input_path!"
     goto path_exists
 )
 
@@ -108,7 +110,8 @@ if "!end_time!"=="" (
 echo.
 
 :confirm_settings
-set /p confirm="确认设置正确吗？(Y/N): "
+set /p confirm="确认设置正确吗？(Y/N，默认Y): "
+if "!confirm!"=="" set "confirm=Y"
 if /i "!confirm!"=="N" goto input_start
 if /i not "!confirm!"=="Y" goto confirm_settings
 
@@ -135,4 +138,9 @@ if errorlevel 1 (
 )
 
 echo.
-pause
+echo 按回车键返回开始，或输入 Q 退出...
+set /p continue_choice=""
+if /i "!continue_choice!"=="Q" (
+    exit /b
+)
+goto main_loop
