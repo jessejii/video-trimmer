@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 :start
 python merge_videos.py
 echo.
