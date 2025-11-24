@@ -99,6 +99,106 @@ def merge_videos_fast(directory, video_files, output_file):
             os.remove(list_file)
         raise e
 
+def merge_videos_fast_convert(directory, video_files, output_file):
+    """模式4：快速转换后合并（只转换容器，不重新编码）
+    
+    Args:
+        directory: 视频目录
+        video_files: 视频文件列表
+        output_file: 输出文件路径
+    """
+    temp_dir = os.path.join(directory, "temp")
+    
+    # 创建临时目录
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
+    
+    try:
+        converted_files = []
+        
+        print(f"\n🚀 开始快速转换视频为 MP4 格式（只转换容器）...")
+        
+        # 快速转换每个视频
+        for i, video in enumerate(video_files, 1):
+            input_path = os.path.join(directory, video)
+            temp_output = os.path.join(temp_dir, f"temp_{i:03d}.mp4")
+            
+            print(f"  [{i}/{len(video_files)}] 转换中: {video}")
+            
+            # 使用 -c copy 快速转换
+            cmd = [
+                'ffmpeg',
+                '-i', input_path,
+                '-c', 'copy',
+                '-y',
+                temp_output
+            ]
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore'
+            )
+            
+            if result.returncode == 0:
+                converted_files.append(temp_output)
+                print(f"  ✅ 完成")
+            else:
+                print(f"  ❌ 转换失败: {video}")
+                raise Exception(f"转换失败: {video}")
+        
+        # 创建文件列表
+        list_file = os.path.join(temp_dir, "filelist.txt")
+        with open(list_file, 'w', encoding='utf-8') as f:
+            for temp_file in converted_files:
+                escaped_path = temp_file.replace("\\", "/").replace("'", "'\\''")
+                f.write(f"file '{escaped_path}'\n")
+        
+        print(f"\n🚀 开始合并转换后的视频...")
+        
+        # 合并转换后的文件
+        cmd = [
+            'ffmpeg',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', list_file,
+            '-c', 'copy',
+            '-y',
+            output_file
+        ]
+        
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='ignore'
+        )
+        
+        success = result.returncode == 0
+        
+        # 清理临时文件
+        print(f"\n🧹 清理临时文件...")
+        for temp_file in converted_files:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        if os.path.exists(list_file):
+            os.remove(list_file)
+        if os.path.exists(temp_dir):
+            os.rmdir(temp_dir)
+        
+        return success, result.stderr
+        
+    except Exception as e:
+        # 清理临时文件
+        if os.path.exists(temp_dir):
+            for file in os.listdir(temp_dir):
+                os.remove(os.path.join(temp_dir, file))
+            os.rmdir(temp_dir)
+        raise e
+
 def merge_videos_convert(directory, video_files, output_file, encoder='cpu'):
     """模式2/3：转换后合并（先转换为标准格式再合并）
     
@@ -189,7 +289,7 @@ def merge_videos(directory, mode=1):
     
     Args:
         directory: 视频目录
-        mode: 合并模式 (1=快速, 2=CPU转换, 3=GPU转换)
+        mode: 合并模式 (1=快速, 2=CPU转换, 3=GPU转换, 4=快速转换)
     """
     video_files = get_video_files(directory)
     
@@ -223,8 +323,10 @@ def merge_videos(directory, mode=1):
             success, stderr = merge_videos_fast(directory, video_files, output_file)
         elif mode == 2:
             success, stderr = merge_videos_convert(directory, video_files, output_file, encoder='cpu')
-        else:  # mode == 3
+        elif mode == 3:
             success, stderr = merge_videos_convert(directory, video_files, output_file, encoder='gpu')
+        else:  # mode == 4
+            success, stderr = merge_videos_fast_convert(directory, video_files, output_file)
         
         if success:
             file_size = os.path.getsize(output_file) / (1024 * 1024)  # MB
@@ -268,8 +370,9 @@ def main():
     print("  1. 快速合并（默认，直接合并，速度快但可能失败）")
     print("  2. CPU 转换合并（libx264，兼容性最好但速度慢）")
     print("  3. GPU 转换合并（h264_amf，AMD 显卡加速，速度快）")
+    print("  4. 快速转换合并（只转换容器为 MP4，不重新编码，速度快且兼容性好）")
     
-    mode_input = input("\n请输入模式编号 (1/2/3，默认为1): ").strip()
+    mode_input = input("\n请输入模式编号 (1/2/3/4，默认为1): ").strip()
     
     if mode_input == '2':
         mode = 2
@@ -277,6 +380,9 @@ def main():
     elif mode_input == '3':
         mode = 3
         print("\n✨ 已选择：GPU 转换合并模式 (AMD 显卡加速)")
+    elif mode_input == '4':
+        mode = 4
+        print("\n✨ 已选择：快速转换合并模式")
     else:
         mode = 1
         print("\n✨ 已选择：快速合并模式")
