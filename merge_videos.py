@@ -350,8 +350,18 @@ def merge_videos(directory, mode=1):
     for i, file in enumerate(video_files, 1):
         print(f"  {i}. {file}")
     
-    # 输出文件路径
-    output_file = os.path.join(directory, "merged_output.mp4")
+    # 生成输出文件名：使用第一个和最后一个视频的简略名称
+    first_name = os.path.splitext(video_files[0])[0]
+    last_name = os.path.splitext(video_files[-1])[0]
+    
+    # 如果只有两个文件，使用 "first_last_merge_videos.mp4"
+    # 如果有多个文件，使用 "first_last_merge_videos.mp4"
+    if len(video_files) == 2:
+        output_filename = f"{first_name}_{last_name}_merge_videos.mp4"
+    else:
+        output_filename = f"{first_name}_{last_name}_merge_videos.mp4"
+    
+    output_file = os.path.join(directory, output_filename)
     
     # 检查输出文件是否已存在
     if os.path.exists(output_file):

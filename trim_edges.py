@@ -108,9 +108,9 @@ def trim_video_edges(input_file, start_trim, end_trim, output_file=None, output_
     
     if output_file is None:
         if output_dir:
-            output_file = os.path.join(output_dir, f"{base_name}_trimmed.mp4")
+            output_file = os.path.join(output_dir, f"{base_name}_trim_edges.mp4")
         else:
-            output_file = os.path.join(input_dir, f"{base_name}_trimmed.mp4")
+            output_file = os.path.join(input_dir, f"{base_name}_trim_edges.mp4")
     
     # 创建输出文件夹
     output_dir_path = os.path.dirname(output_file)
