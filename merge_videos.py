@@ -55,49 +55,7 @@ def convert_to_mp4(input_file, output_file, encoder='cpu'):
     
     return result.returncode == 0
 
-def merge_videos_fast(directory, video_files, output_file):
-    """模式1：快速合并（直接复制流）"""
-    list_file = os.path.join(directory, "filelist.txt")
-    
-    try:
-        # 写入文件列表
-        with open(list_file, 'w', encoding='utf-8') as f:
-            for video in video_files:
-                video_path = os.path.join(directory, video)
-                escaped_path = video_path.replace("\\", "/").replace("'", "'\\''")
-                f.write(f"file '{escaped_path}'\n")
-        
-        print(f"\n🚀 开始快速合并视频...")
-        
-        # ffmpeg 命令 - 使用快速复制模式
-        cmd = [
-            'ffmpeg',
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', list_file,
-            '-c', 'copy',
-            '-y',
-            output_file
-        ]
-        
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            errors='ignore'
-        )
-        
-        # 清理临时文件
-        if os.path.exists(list_file):
-            os.remove(list_file)
-        
-        return result.returncode == 0, result.stderr
-        
-    except Exception as e:
-        if os.path.exists(list_file):
-            os.remove(list_file)
-        raise e
+
 
 def merge_videos_convert(directory, video_files, output_file, encoder='cpu'):
     """模式2：转换后合并（先转换为标准格式再合并）
@@ -185,7 +143,7 @@ def merge_videos_convert(directory, video_files, output_file, encoder='cpu'):
         raise e
 
 def merge_videos_fast_convert(directory, video_files, output_file):
-    """模式3：快速转换后合并（先快速转换为 MP4 容器，再合并）"""
+    """模式1：快速转换后合并（先快速转换为 MP4 容器，再合并）"""
     temp_dir = os.path.join(directory, "temp")
     
     # 创建临时目录
@@ -279,7 +237,7 @@ def merge_videos_fast_convert(directory, video_files, output_file):
         raise e
 
 def merge_videos_direct_gpu(directory, video_files, output_file):
-    """模式4：直接GPU合并（利用ffmpeg concat demuxer + GPU重编码，修复时间戳问题）"""
+    """模式3：直接GPU合并（利用ffmpeg concat demuxer + GPU重编码，修复时间戳问题）"""
     list_file = os.path.join(directory, "filelist.txt")
     
     try:
@@ -334,7 +292,7 @@ def merge_videos(directory, mode=1):
     
     Args:
         directory: 视频目录
-        mode: 合并模式 (1=快速, 2=CPU转换, 3=快速转换, 4=直接GPU合并)
+        mode: 合并模式 (1=快速转换, 2=CPU转换, 3=直接GPU合并)
     """
     video_files = get_video_files(directory)
     
@@ -375,12 +333,10 @@ def merge_videos(directory, mode=1):
     try:
         # 根据模式选择合并方式
         if mode == 1:
-            success, stderr = merge_videos_fast(directory, video_files, output_file)
+            success, stderr = merge_videos_fast_convert(directory, video_files, output_file)
         elif mode == 2:
             success, stderr = merge_videos_convert(directory, video_files, output_file, encoder='cpu')
-        elif mode == 3:
-            success, stderr = merge_videos_fast_convert(directory, video_files, output_file)
-        else:  # mode == 4
+        else:  # mode == 3
             success, stderr = merge_videos_direct_gpu(directory, video_files, output_file)
         
         if success:
@@ -422,25 +378,21 @@ def main():
     
     # 选择合并模式
     print("\n请选择合并模式：")
-    print("  1. 快速合并（默认，直接合并，速度快但兼容性较差）")
+    print("  1. 快速转换合并（先快速转为 MP4 容器，再合并，兼容性好且速度快）")
     print("  2. CPU 转换合并（libx264，兼容性好但速度慢）")
-    print("  3. 快速转换合并（先快速转为 MP4 容器，再合并，兼容性好且速度快）")
-    print("  4. 直接 GPU 合并（不生成临时文件，直接合并重编码，强烈推荐！修复卡顿）")
+    print("  3. 直接 GPU 合并（不生成临时文件，直接合并重编码，强烈推荐！修复卡顿）")
     
-    mode_input = input("\n请输入模式编号 (1/2/3/4，默认为1): ").strip()
+    mode_input = input("\n请输入模式编号 (1/2/3，默认为1): ").strip()
     
     if mode_input == '2':
         mode = 2
         print("\n✨ 已选择：CPU 转换合并模式")
     elif mode_input == '3':
         mode = 3
-        print("\n✨ 已选择：快速转换合并模式")
-    elif mode_input == '4':
-        mode = 4
         print("\n✨ 已选择：直接 GPU 合并模式 (推荐，修复卡顿)")
     else:
         mode = 1
-        print("\n✨ 已选择：快速合并模式")
+        print("\n✨ 已选择：快速转换合并模式")
     
     # 执行合并
     merge_videos(directory, mode)

@@ -14,7 +14,7 @@ REM 交互式模式 - 主循环
 :start
 cls
 echo ====================================
-echo 视频帧截取工具
+echo 视频截图工具
 echo ====================================
 echo.
 echo 支持处理单个文件或整个文件夹
@@ -58,27 +58,32 @@ echo 已选择: !input_path!
 echo.
 
 :input_frame
-set "frame_number="
-set /p frame_number="请输入要截取的帧号（直接回车默认第1帧）: "
+set "time_input="
+set /p time_input="请输入截取时间（直接回车默认0秒）: "
 
 REM 去除两端的引号
-set frame_number=!frame_number:"=!
+set time_input=!time_input:"=!
 
+echo.
+echo 时间格式说明:
+echo   30      = 30秒
+echo   1:30    = 1分30秒
+echo   1:2:3   = 1小时2分3秒
 echo.
 echo ====================================
 echo 开始处理...
 echo ====================================
 echo.
 
-set "use_default_frame=false"
-if "!frame_number!"=="" set "use_default_frame=true"
-if "!frame_number!"==" " set "use_default_frame=true"
-if "!frame_number!"=="=" set "use_default_frame=true"
+set "use_default_time=false"
+if "!time_input!"=="" set "use_default_time=true"
+if "!time_input!"==" " set "use_default_time=true"
+if "!time_input!"=="=" set "use_default_time=true"
 
-if "!use_default_frame!"=="true" (
+if "!use_default_time!"=="true" (
     python extract_frame.py "!input_path!"
 ) else (
-    python extract_frame.py "!input_path!" !frame_number!
+    python extract_frame.py "!input_path!" !time_input!
 )
 
 if errorlevel 1 (

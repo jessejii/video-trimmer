@@ -11,7 +11,7 @@ echo ====================================
 echo.
 echo 功能: 将字幕文件(如 .srt) 后缀修改为 .srt.txt
 echo 示例: 1.srt -^> 1.srt.txt
-echo 支持处理单个文件 or 整个文件夹
+echo 支持处理单个文件 or 整个文件夹(含子目录)
 echo.
 
 :input_path
@@ -42,11 +42,11 @@ if exist "!input_path!\" (
     pushd "!input_path!"
     set "count=0"
     
-    REM 遍历常见的字幕格式
+    REM 遍历常见的字幕格式 (支持递归)
     for %%x in (srt ass vtt lrc) do (
-        for %%f in (*.%%x) do (
-             echo 重命名: "%%f" -^> "%%f.txt"
-             ren "%%f" "%%f.txt"
+        for /r %%f in (*.%%x) do (
+             echo 重命名: "%%f" -^> "%%~nxf.txt"
+             ren "%%f" "%%~nxf.txt"
              set /a count+=1
         )
     )
