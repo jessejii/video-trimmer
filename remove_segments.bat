@@ -87,6 +87,7 @@ echo 要删除的时间段: !segments!
 echo.
 
 :confirm_segments
+set "confirm=Y"
 set /p confirm="确认时间段正确吗？(Y/N): "
 if /i "!confirm!"=="N" goto input_segments
 if /i not "!confirm!"=="Y" goto confirm_segments
