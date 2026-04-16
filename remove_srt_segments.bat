@@ -1,11 +1,10 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-REM åˆ‡æ¢åˆ° bat æ‰€åœ¨ç›®å½•ï¼Œé¿å…ç›¸å¯¹è·¯å¾„é—®é¢˜
+REM ÇÐ»»µ½ bat ËùÔÚÄ¿Â¼£¬±ÜÃâÏà¶ÔÂ·¾¶ÎÊÌâ
 cd /d "%~dp0"
 
-REM å¦‚æžœæœ‰å‘½ä»¤è¡Œå‚æ•°ï¼Œç›´æŽ¥é€ä¼ ç»™ Python è„šæœ¬
+REM Èç¹ûÓÐÃüÁîÐÐ²ÎÊý£¬Ö±½ÓÍ¸´«¸ø Python ½Å±¾
 if not "%~1"=="" (
     python remove_srt_segments.py %*
     echo.
@@ -16,23 +15,23 @@ if not "%~1"=="" (
 :start
 cls
 echo ====================================
-echo SRT å­—å¹•æ—¶é—´æ®µåˆ é™¤å·¥å…·
+echo SRT ×ÖÄ»Ê±¼ä¶ÎÉ¾³ý¹¤¾ß
 echo ====================================
 echo.
-echo æç¤º: å¯ç›´æŽ¥æ‹–æ‹½ .srt æ–‡ä»¶åˆ°æœ¬çª—å£
+echo ÌáÊ¾: ¿ÉÖ±½ÓÍÏ×§ .srt »ò .srt.txt ÎÄ¼þµ½±¾´°¿Ú
 echo.
-  
+
 :input_file
 set "input_file="
-set /p input_file="è¯·è¾“å…¥ SRT æ–‡ä»¶è·¯å¾„: "
+set /p input_file="ÇëÊäÈë×ÖÄ»ÎÄ¼þÂ·¾¶(.srt/.srt.txt): "
 
 if "!input_file!"=="" (
-    echo é”™è¯¯: æ–‡ä»¶è·¯å¾„ä¸èƒ½ä¸ºç©º
+    echo ´íÎó: ÎÄ¼þÂ·¾¶²»ÄÜÎª¿Õ
     echo.
     goto input_file
 )
 
-REM åŽ»é™¤ä¸¤ç«¯å¼•å·
+REM È¥³ýÁ½¶ËÒýºÅ
 set "input_file=!input_file:"=!"
 
 if exist "!input_file!" (
@@ -44,32 +43,38 @@ if exist "%cd%\!input_file!" (
     goto file_ok
 )
 
-echo é”™è¯¯: æ–‡ä»¶ä¸å­˜åœ¨
-echo å½“å‰è¾“å…¥: !input_file!
+echo ´íÎó: ÎÄ¼þ²»´æÔÚ
+echo µ±Ç°ÊäÈë: !input_file!
 echo.
 goto input_file
 
 :file_ok
 
-REM æ ¡éªŒæ‰©å±•å
-set "ext=%~x1"
-for %%I in ("!input_file!") do set "ext=%%~xI"
-if /i not "!ext!"==".srt" (
-    echo è­¦å‘Š: æ–‡ä»¶æ‰©å±•åä¸æ˜¯ .srtï¼Œä»å°†å°è¯•å¤„ç†
+REM Ð£ÑéÀ©Õ¹Ãû£¨Ö§³Ö .srt ºÍ .srt.txt£©
+set "is_valid_ext=0"
+for %%I in ("!input_file!") do (
+    set "name=%%~nxI"
+    set "ext=%%~xI"
+)
+if /i "!ext!"==".srt" set "is_valid_ext=1"
+if /i "!name:~-8!"==".srt.txt" set "is_valid_ext=1"
+
+if "!is_valid_ext!"=="0" (
+    echo ¾¯¸æ: ÎÄ¼þÀ©Õ¹Ãû²»ÊÇ .srt »ò .srt.txt£¬ÈÔ½«³¢ÊÔ´¦Àí
     echo.
 )
 
 echo.
-echo å·²é€‰æ‹©: !input_file!
+echo ÒÑÑ¡Ôñ: !input_file!
 echo.
 echo ====================================
-echo åˆ é™¤æ—¶é—´æ®µæ ¼å¼è¯´æ˜Ž
+echo É¾³ýÊ±¼ä¶Î¸ñÊ½ËµÃ÷
 echo ====================================
-echo æ ¼å¼: å¼€å§‹-ç»“æŸ,å¼€å§‹-ç»“æŸ,...
-echo ç¤ºä¾‹: 1:00-2:00,5:00-6:00
+echo ¸ñÊ½: ¿ªÊ¼-½áÊø,¿ªÊ¼-½áÊø,...
+echo Ê¾Àý: 1:00-2:00,5:00-6:00
 echo.
-echo æ—¶é—´æ ¼å¼æ”¯æŒ:
-echo   - HH:MM:SS,mmm (æ ‡å‡† SRT)
+echo Ê±¼ä¸ñÊ½Ö§³Ö:
+echo   - HH:MM:SS,mmm (±ê×¼ SRT)
 echo   - HH:MM:SS
 echo   - MM:SS
 echo   - SS
@@ -77,28 +82,28 @@ echo.
 
 :input_ranges
 set "ranges="
-set /p ranges="è¯·è¾“å…¥è¦åˆ é™¤çš„æ—¶é—´æ®µ: "
+set /p ranges="ÇëÊäÈëÒªÉ¾³ýµÄÊ±¼ä¶Î: "
 
 if "!ranges!"=="" (
-    echo é”™è¯¯: æ—¶é—´æ®µä¸èƒ½ä¸ºç©º
+    echo ´íÎó: Ê±¼ä¶Î²»ÄÜÎª¿Õ
     echo.
     goto input_ranges
 )
 
 echo.
-echo è¾“å…¥æ–‡ä»¶: !input_file!
-echo åˆ é™¤åŒºé—´: !ranges!
+echo ÊäÈëÎÄ¼þ: !input_file!
+echo É¾³ýÇø¼ä: !ranges!
 echo.
 
 :confirm
 set "confirm=Y"
-set /p confirm="ç¡®è®¤å¼€å§‹å¤„ç†ï¼Ÿ(Y/N): "
+set /p confirm="È·ÈÏ¿ªÊ¼´¦Àí£¿(Y/N): "
 if /i "!confirm!"=="N" goto start
 if /i not "!confirm!"=="Y" goto confirm
 
 echo.
 echo ====================================
-echo å¼€å§‹å¤„ç†...
+echo ¿ªÊ¼´¦Àí...
 echo ====================================
 echo.
 
@@ -106,15 +111,15 @@ python remove_srt_segments.py "!input_file!" "!ranges!"
 
 if errorlevel 1 (
     echo.
-    echo å¤„ç†å¤±è´¥ï¼Œè¯·æ£€æŸ¥è¾“å…¥åŽé‡è¯•
+    echo ´¦ÀíÊ§°Ü£¬Çë¼ì²éÊäÈëºóÖØÊÔ
 ) else (
     echo.
     echo ====================================
-    echo å¤„ç†å®Œæˆ
+    echo ´¦ÀíÍê³É
     echo ====================================
 )
 
 echo.
-echo æŒ‰å›žè½¦ç»§ç»­å¤„ç†ä¸‹ä¸€ä¸ªæ–‡ä»¶ï¼Œæˆ–ç›´æŽ¥å…³é—­çª—å£é€€å‡º...
+echo °´»Ø³µ¼ÌÐø´¦ÀíÏÂÒ»¸öÎÄ¼þ£¬»òÖ±½Ó¹Ø±Õ´°¿ÚÍË³ö...
 pause >nul
 goto start

@@ -1,8 +1,7 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-REM å¦‚æžœæœ‰å‘½ä»¤è¡Œå‚æ•°ï¼Œç›´æŽ¥æ‰§è¡Œ
+REM Èç¹ûÓÐÃüÁîÐÐ²ÎÊý£¬Ö±½ÓÖ´ÐÐ
 if not "%~1"=="" (
     python remove_segments.py %*
     echo.
@@ -10,91 +9,91 @@ if not "%~1"=="" (
     exit /b
 )
 
-REM äº¤äº’å¼æ¨¡å¼ - ä¸»å¾ªçŽ¯
+REM ½»»¥Ê½Ä£Ê½ - Ö÷Ñ­»·
 :start
 cls
 echo ====================================
-echo è§†é¢‘ç‰‡æ®µåˆ é™¤å·¥å…·
+echo ÊÓÆµÆ¬¶ÎÉ¾³ý¹¤¾ß
 echo ====================================
 echo.
-echo æ”¯æŒå¤„ç†å•ä¸ªæ–‡ä»¶æˆ–æ•´ä¸ªæ–‡ä»¶å¤¹
-echo æç¤º: å¯ä»¥ç›´æŽ¥æ‹–æ‹½æ–‡ä»¶æˆ–æ–‡ä»¶å¤¹åˆ°æ­¤çª—å£
+echo Ö§³Ö´¦Àíµ¥¸öÎÄ¼þ»òÕû¸öÎÄ¼þ¼Ð
+echo ÌáÊ¾: ¿ÉÒÔÖ±½ÓÍÏ×§ÎÄ¼þ»òÎÄ¼þ¼Ðµ½´Ë´°¿Ú
 echo.
 
 :input_path
 set "input_path="
-set /p input_path="è¯·è¾“å…¥è§†é¢‘æ–‡ä»¶æˆ–æ–‡ä»¶å¤¹è·¯å¾„: "
+set /p input_path="ÇëÊäÈëÊÓÆµÎÄ¼þ»òÎÄ¼þ¼ÐÂ·¾¶: "
 
 if "!input_path!"=="" (
-    echo é”™è¯¯: è·¯å¾„ä¸èƒ½ä¸ºç©º
+    echo ´íÎó: Â·¾¶²»ÄÜÎª¿Õ
     echo.
     goto input_path
 )
 
-REM åŽ»é™¤è·¯å¾„ä¸¤ç«¯çš„å¼•å·
+REM È¥³ýÂ·¾¶Á½¶ËµÄÒýºÅ
 set input_path=!input_path:"=!
 
-REM æ£€æŸ¥è·¯å¾„æ˜¯å¦å­˜åœ¨
+REM ¼ì²éÂ·¾¶ÊÇ·ñ´æÔÚ
 if exist "!input_path!" (
     goto path_exists
 )
 
-REM å¦‚æžœè·¯å¾„ä¸å­˜åœ¨ï¼Œå°è¯•ç›¸å¯¹è·¯å¾„
+REM Èç¹ûÂ·¾¶²»´æÔÚ£¬³¢ÊÔÏà¶ÔÂ·¾¶
 if exist "!cd!\!input_path!" (
     set "input_path=!cd!\!input_path!"
     goto path_exists
 )
 
-echo é”™è¯¯: è·¯å¾„ä¸å­˜åœ¨
-echo å½“å‰è¾“å…¥: !input_path!
-echo æç¤º: å¯ä»¥æ‹–æ‹½æ–‡ä»¶/æ–‡ä»¶å¤¹åˆ°çª—å£ä¸­ï¼Œæˆ–è¾“å…¥å®Œæ•´è·¯å¾„
+echo ´íÎó: Â·¾¶²»´æÔÚ
+echo µ±Ç°ÊäÈë: !input_path!
+echo ÌáÊ¾: ¿ÉÒÔÍÏ×§ÎÄ¼þ/ÎÄ¼þ¼Ðµ½´°¿ÚÖÐ£¬»òÊäÈëÍêÕûÂ·¾¶
 echo.
 goto input_path
 
 :path_exists
 
 echo.
-echo å·²é€‰æ‹©: !input_path!
+echo ÒÑÑ¡Ôñ: !input_path!
 echo.
 echo ====================================
-echo æ—¶é—´æ®µæ ¼å¼è¯´æ˜Ž
+echo Ê±¼ä¶Î¸ñÊ½ËµÃ÷
 echo ====================================
-echo æ ¼å¼: å¼€å§‹-ç»“æŸ,å¼€å§‹-ç»“æŸ,...
+echo ¸ñÊ½: ¿ªÊ¼-½áÊø,¿ªÊ¼-½áÊø,...
 echo.
-echo æ—¶é—´æ ¼å¼æ”¯æŒ:
-echo   - HH:MM:SS (ä¾‹å¦‚: 1:30:45)
-echo   - MM:SS (ä¾‹å¦‚: 1:30)
-echo   - SS (ä¾‹å¦‚: 90)
+echo Ê±¼ä¸ñÊ½Ö§³Ö:
+echo   - HH:MM:SS (ÀýÈç: 1:30:45)
+echo   - MM:SS (ÀýÈç: 1:30)
+echo   - SS (ÀýÈç: 90)
 echo.
-echo ç¤ºä¾‹:
-echo   1:00-2:00              åˆ é™¤ 1åˆ†é’Ÿ åˆ° 2åˆ†é’Ÿ
-echo   1:00-2:00,5:00-6:00    åˆ é™¤ä¸¤ä¸ªæ—¶é—´æ®µ
-echo   0:30-1:00,10:00-10:30  åˆ é™¤å¼€å¤´å’Œä¸­é—´çš„ç‰‡æ®µ
+echo Ê¾Àý:
+echo   1:00-2:00              É¾³ý 1·ÖÖÓ µ½ 2·ÖÖÓ
+echo   1:00-2:00,5:00-6:00    É¾³ýÁ½¸öÊ±¼ä¶Î
+echo   0:30-1:00,10:00-10:30  É¾³ý¿ªÍ·ºÍÖÐ¼äµÄÆ¬¶Î
 echo.
 
 :input_segments
 set "segments="
-set /p segments="è¯·è¾“å…¥è¦åˆ é™¤çš„æ—¶é—´æ®µ: "
+set /p segments="ÇëÊäÈëÒªÉ¾³ýµÄÊ±¼ä¶Î: "
 
 if "!segments!"=="" (
-    echo é”™è¯¯: æ—¶é—´æ®µä¸èƒ½ä¸ºç©º
+    echo ´íÎó: Ê±¼ä¶Î²»ÄÜÎª¿Õ
     echo.
     goto input_segments
 )
 
 echo.
-echo è¦åˆ é™¤çš„æ—¶é—´æ®µ: !segments!
+echo ÒªÉ¾³ýµÄÊ±¼ä¶Î: !segments!
 echo.
 
 :confirm_segments
 set "confirm=Y"
-set /p confirm="ç¡®è®¤æ—¶é—´æ®µæ­£ç¡®å—ï¼Ÿ(Y/N): "
+set /p confirm="È·ÈÏÊ±¼ä¶ÎÕýÈ·Âð£¿(Y/N): "
 if /i "!confirm!"=="N" goto input_segments
 if /i not "!confirm!"=="Y" goto confirm_segments
 
 echo.
 echo ====================================
-echo å¼€å§‹å¤„ç†...
+echo ¿ªÊ¼´¦Àí...
 echo ====================================
 echo.
 
@@ -102,15 +101,15 @@ python remove_segments.py "!input_path!" "!segments!"
 
 if errorlevel 1 (
     echo.
-    echo å¤„ç†è¿‡ç¨‹ä¸­å‡ºçŽ°é”™è¯¯
+    echo ´¦Àí¹ý³ÌÖÐ³öÏÖ´íÎó
 ) else (
     echo.
     echo ====================================
-    echo å¤„ç†å®Œæˆ
+    echo ´¦ÀíÍê³É
     echo ====================================
 )
 
 echo.
-echo æŒ‰å›žè½¦é”®ç»§ç»­å¤„ç†ä¸‹ä¸€ä¸ªæ–‡ä»¶ï¼Œæˆ–å…³é—­çª—å£é€€å‡º...
+echo °´»Ø³µ¼ü¼ÌÐø´¦ÀíÏÂÒ»¸öÎÄ¼þ£¬»ò¹Ø±Õ´°¿ÚÍË³ö...
 pause >nul
 goto start

@@ -1,8 +1,7 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-REM å¦‚æœæœ‰å‘½ä»¤è¡Œå‚æ•°ï¼Œç›´æ¥æ‰§è¡Œ
+REM Èç¹ûÓĞÃüÁîĞĞ²ÎÊı£¬Ö±½ÓÖ´ĞĞ
 if not "%~1"=="" (
     python batch_trim_edges.py %*
     echo.
@@ -10,63 +9,63 @@ if not "%~1"=="" (
     exit /b
 )
 
-REM äº¤äº’å¼æ¨¡å¼ - ä¸»å¾ªç¯
+REM ½»»¥Ê½Ä£Ê½ - Ö÷Ñ­»·
 :main_loop
 cls
 echo ========================================
-echo æ‰¹é‡è§†é¢‘å¼€å¤´ç»“å°¾è£å‰ªå·¥å…· (æŒ‡å®šæ—¶é•¿)
+echo ÅúÁ¿ÊÓÆµ¿ªÍ·½áÎ²²Ã¼ô¹¤¾ß (Ö¸¶¨Ê±³¤)
 echo ========================================
 echo.
-echo æ­¤å·¥å…·ä¼šæ‰¹é‡å‰ªæ‰è§†é¢‘å¼€å¤´çš„ X æ—¶é—´å’Œç»“å°¾çš„ Y æ—¶é—´ã€‚
-echo æç¤º: å¯ä»¥ç›´æ¥æ‹–æ‹½æ–‡ä»¶å¤¹åˆ°æ­¤çª—å£
+echo ´Ë¹¤¾ß»áÅúÁ¿¼ôµôÊÓÆµ¿ªÍ·µÄ X Ê±¼äºÍ½áÎ²µÄ Y Ê±¼ä¡£
+echo ÌáÊ¾: ¿ÉÒÔÖ±½ÓÍÏ×§ÎÄ¼ş¼Ğµ½´Ë´°¿Ú
 echo.
 
 :input_path
 set "input_path="
-set /p input_path="è¯·è¾“å…¥è§†é¢‘æ–‡ä»¶å¤¹è·¯å¾„: "
+set /p input_path="ÇëÊäÈëÊÓÆµÎÄ¼ş¼ĞÂ·¾¶: "
 
 if "!input_path!"=="" (
-    echo é”™è¯¯: è·¯å¾„ä¸èƒ½ä¸ºç©º
+    echo ´íÎó: Â·¾¶²»ÄÜÎª¿Õ
     echo.
     goto input_path
 )
 
-REM å»é™¤è·¯å¾„ä¸¤ç«¯çš„å¼•å·
+REM È¥³ıÂ·¾¶Á½¶ËµÄÒıºÅ
 set input_path=!input_path:"=!
 
-REM æ£€æŸ¥è·¯å¾„æ˜¯å¦å­˜åœ¨
+REM ¼ì²éÂ·¾¶ÊÇ·ñ´æÔÚ
 if exist "!input_path!" (
     goto path_exists
 )
 
-REM å¦‚æœè·¯å¾„ä¸å­˜åœ¨ï¼Œå°è¯•ç›¸å¯¹è·¯å¾„
+REM Èç¹ûÂ·¾¶²»´æÔÚ£¬³¢ÊÔÏà¶ÔÂ·¾¶
 if exist "%cd%\!input_path!" (
     set "input_path=%cd%\!input_path!"
     goto path_exists
 )
 
-echo é”™è¯¯: è·¯å¾„ä¸å­˜åœ¨
-echo å½“å‰è¾“å…¥: !input_path!
+echo ´íÎó: Â·¾¶²»´æÔÚ
+echo µ±Ç°ÊäÈë: !input_path!
 echo.
 goto input_path
 
 :path_exists
 
 echo.
-echo å·²é€‰æ‹©ç›®å½•: !input_path!
+echo ÒÑÑ¡ÔñÄ¿Â¼: !input_path!
 echo.
 echo ========================================
-echo è£å‰ªæ—¶é•¿è®¾ç½®
+echo ²Ã¼ôÊ±³¤ÉèÖÃ
 echo ========================================
-echo æ—¶é—´æ ¼å¼æ”¯æŒ:
-echo   - HH:MM:SS (ä¾‹å¦‚: 00:01:30 ä»£è¡¨1åˆ†30ç§’)
-echo   - MM:SS (ä¾‹å¦‚: 1:30)
-echo   - SS (ä¾‹å¦‚: 90)
+echo Ê±¼ä¸ñÊ½Ö§³Ö:
+echo   - HH:MM:SS (ÀıÈç: 00:01:30 ´ú±í1·Ö30Ãë)
+echo   - MM:SS (ÀıÈç: 1:30)
+echo   - SS (ÀıÈç: 90)
 echo.
 
 :input_start
 set "start_cut="
-set /p start_cut="è¯·è¾“å…¥å¼€å¤´è¦åˆ‡æ‰çš„æ—¶é•¿ (ç›´æ¥å›è½¦ä¸º0): "
+set /p start_cut="ÇëÊäÈë¿ªÍ·ÒªÇĞµôµÄÊ±³¤ (Ö±½Ó»Ø³µÎª0): "
 
 if "!start_cut!"=="" (
     set "start_cut=0"
@@ -76,7 +75,7 @@ echo.
 
 :input_end
 set "end_cut="
-set /p end_cut="è¯·è¾“å…¥ç»“å°¾è¦åˆ‡æ‰çš„æ—¶é•¿ (ç›´æ¥å›è½¦ä¸º0): "
+set /p end_cut="ÇëÊäÈë½áÎ²ÒªÇĞµôµÄÊ±³¤ (Ö±½Ó»Ø³µÎª0): "
 
 if "!end_cut!"=="" (
     set "end_cut=0"
@@ -84,24 +83,24 @@ if "!end_cut!"=="" (
 
 echo.
 echo ========================================
-echo è£å‰ªè®¾ç½®ç¡®è®¤
+echo ²Ã¼ôÉèÖÃÈ·ÈÏ
 echo ========================================
-echo æ–‡ä»¶å¤¹: !input_path!
-echo å¼€å¤´åˆ‡å‰²: !start_cut! (ä»0å¼€å§‹å¾€ååˆ‡è¿™ä¹ˆé•¿)
-echo ç»“å°¾åˆ‡å‰²: !end_cut! (ä»æœ«å°¾å¾€å‰åˆ‡è¿™ä¹ˆé•¿)
+echo ÎÄ¼ş¼Ğ: !input_path!
+echo ¿ªÍ·ÇĞ¸î: !start_cut! (´Ó0¿ªÊ¼ÍùºóÇĞÕâÃ´³¤)
+echo ½áÎ²ÇĞ¸î: !end_cut! (´ÓÄ©Î²ÍùÇ°ÇĞÕâÃ´³¤)
 echo.
-echo å¤„ç†åçš„æ–‡ä»¶å°†ä¿å­˜åœ¨å­ç›®å½• [cut] ä¸‹ã€‚
+echo ´¦ÀíºóµÄÎÄ¼ş½«±£´æÔÚ×ÓÄ¿Â¼ [cut] ÏÂ¡£
 echo.
 
 :confirm_settings
-set /p confirm="ç¡®è®¤å¼€å§‹å¤„ç†å—ï¼Ÿ(Y/Nï¼Œé»˜è®¤Y): "
+set /p confirm="È·ÈÏ¿ªÊ¼´¦ÀíÂğ£¿(Y/N£¬Ä¬ÈÏY): "
 if "!confirm!"=="" set "confirm=Y"
 if /i "!confirm!"=="N" goto main_loop
 if /i not "!confirm!"=="Y" goto confirm_settings
 
 echo.
 echo ========================================
-echo æ­£åœ¨è¿è¡Œè„šæœ¬...
+echo ÕıÔÚÔËĞĞ½Å±¾...
 echo ========================================
 echo.
 
@@ -109,16 +108,16 @@ python batch_trim_edges.py "!input_path!" "!start_cut!" "!end_cut!"
 
 if errorlevel 1 (
     echo.
-    echo å¤„ç†è¿‡ç¨‹ä¸­å‡ºç°é”™è¯¯
+    echo ´¦Àí¹ı³ÌÖĞ³öÏÖ´íÎó
 ) else (
     echo.
     echo ========================================
-    echo æ‰¹é‡è£åˆ‡å¤„ç†å®Œæˆï¼
+    echo ÅúÁ¿²ÃÇĞ´¦ÀíÍê³É£¡
     echo ========================================
 )
 
 echo.
-echo æŒ‰å›è½¦é”®è¿”å›ä¸»èœå•ï¼Œæˆ–è¾“å…¥ Q é€€å‡º...
+echo °´»Ø³µ¼ü·µ»ØÖ÷²Ëµ¥£¬»òÊäÈë Q ÍË³ö...
 set /p continue_choice=""
 if /i "!continue_choice!"=="Q" (
     exit /b

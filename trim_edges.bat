@@ -1,8 +1,7 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-REM 如果有命令行参数，直接执行
+REM ����������в�����ֱ��ִ��
 if not "%~1"=="" (
     python trim_edges.py %*
     echo.
@@ -10,114 +9,114 @@ if not "%~1"=="" (
     exit /b
 )
 
-REM 交互式模式 - 主循环
+REM ����ʽģʽ - ��ѭ��
 :main_loop
 cls
 echo ====================================
-echo 视频开头结尾裁剪工具
+echo ��Ƶ��ͷ��β�ü�����
 echo ====================================
 echo.
-echo 支持处理单个文件或整个文件夹
-echo 提示: 可以直接拖拽文件或文件夹到此窗口
+echo ֧�ִ��������ļ��������ļ���
+echo ��ʾ: ����ֱ����ק�ļ����ļ��е��˴���
 echo.
 
 :input_path
 set "input_path="
-set /p input_path="请输入视频文件或文件夹路径: "
+set /p input_path="��������Ƶ�ļ����ļ���·��: "
 
 if "!input_path!"=="" (
-    echo 错误: 路径不能为空
+    echo ����: ·������Ϊ��
     echo.
     goto input_path
 )
 
-REM 去除路径两端的引号
+REM ȥ��·�����˵�����
 set input_path=!input_path:"=!
 
-REM 检查路径是否存在
+REM ���·���Ƿ����
 if exist "!input_path!" (
     goto path_exists
 )
 
-REM 如果路径不存在，尝试相对路径
+REM ���·�������ڣ��������·��
 if exist "%cd%\!input_path!" (
     set "input_path=%cd%\!input_path!"
     goto path_exists
 )
 
-echo 错误: 路径不存在
-echo 当前输入: !input_path!
-echo 提示: 可以拖拽文件/文件夹到窗口中，或输入完整路径
+echo ����: ·��������
+echo ��ǰ����: !input_path!
+echo ��ʾ: ������ק�ļ�/�ļ��е������У�����������·��
 echo.
 goto input_path
 
 :path_exists
 
 echo.
-echo 已选择: !input_path!
+echo ��ѡ��: !input_path!
 echo.
 echo ====================================
-echo 裁剪说明
+echo �ü�˵��
 echo ====================================
-echo 此工具用于裁剪视频的开头和结尾部分
+echo �˹������ڲü���Ƶ�Ŀ�ͷ�ͽ�β����
 echo.
-echo 开头时间: 从 0:00 到该时间点的内容会被删除
-echo 结尾时间: 从该时间点到视频结束的内容会被删除
+echo ��ͷʱ��: �� 0:00 ����ʱ�������ݻᱻɾ��
+echo ��βʱ��: �Ӹ�ʱ��㵽��Ƶ���������ݻᱻɾ��
 echo.
-echo 时间格式支持:
-echo   - HH:MM:SS (例如: 1:30:45)
-echo   - MM:SS (例如: 1:30)
-echo   - SS (例如: 90)
+echo ʱ���ʽ֧��:
+echo   - HH:MM:SS (����: 1:30:45)
+echo   - MM:SS (����: 1:30)
+echo   - SS (����: 90)
 echo.
-echo 示例:
-echo   开头输入 1:00   = 删除 0:00-1:00 的内容, 结尾输入 32:00  = 删除 32:00-结束 的内容
+echo ʾ��:
+echo   ��ͷ���� 1:00   = ɾ�� 0:00-1:00 ������, ��β���� 32:00  = ɾ�� 32:00-���� ������
 echo.
 
 :input_start
 set "start_time="
-set /p start_time="请输入开头裁剪时间点 (直接回车跳过): "
+set /p start_time="�����뿪ͷ�ü�ʱ��� (ֱ�ӻس�����): "
 
 if "!start_time!"=="" (
     set "start_time=0"
-    echo 跳过开头裁剪
+    echo ������ͷ�ü�
 )
 
 echo.
 
 :input_end
 set "end_time="
-set /p end_time="请输入结尾裁剪时间点 (直接回车跳过): "
+set /p end_time="�������β�ü�ʱ��� (ֱ�ӻس�����): "
 
 if "!end_time!"=="" (
-    echo 跳过结尾裁剪
+    echo ������β�ü�
 )
 
 echo.
 echo ====================================
-echo 裁剪设置确认
+echo �ü�����ȷ��
 echo ====================================
 if "!start_time!"=="0" (
-    echo 开头: 不裁剪
+    echo ��ͷ: ���ü�
 ) else (
-    echo 开头: 删除 0:00 - !start_time!
+    echo ��ͷ: ɾ�� 0:00 - !start_time!
 )
 
 if "!end_time!"=="" (
-    echo 结尾: 不裁剪
+    echo ��β: ���ü�
 ) else (
-    echo 结尾: 删除 !end_time! - 视频结束
+    echo ��β: ɾ�� !end_time! - ��Ƶ����
 )
 echo.
 
 :confirm_settings
-set /p confirm="确认设置正确吗？(Y/N，默认Y): "
+set /p confirm="ȷ��������ȷ��(Y/N��Ĭ��Y): "
 if "!confirm!"=="" set "confirm=Y"
 if /i "!confirm!"=="N" goto input_start
 if /i not "!confirm!"=="Y" goto confirm_settings
 
 echo.
 echo ====================================
-echo 开始处理...
+echo ��ʼ����...
 echo ====================================
 echo.
 
@@ -129,16 +128,16 @@ if "!end_time!"=="" (
 
 if errorlevel 1 (
     echo.
-    echo 处理过程中出现错误
+    echo ���������г��ִ���
 ) else (
     echo.
     echo ====================================
-    echo 处理完成
+    echo �������
     echo ====================================
 )
 
 echo.
-echo 按回车键返回开始，或输入 Q 退出...
+echo ���س������ؿ�ʼ�������� Q �˳�...
 set /p continue_choice=""
 if /i "!continue_choice!"=="Q" (
     exit /b

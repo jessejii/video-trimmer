@@ -51,7 +51,7 @@ def get_video_duration(video_file):
 
 def trim_video_edges(input_file, start_trim, end_trim, output_file=None, output_dir=None):
     """
-    裁剪视频的开头和结尾
+    裁剪视频的开头和结尾（使用 TS 流模式进行无损精确裁剪）
     
     参数:
         input_file: 输入视频文件
@@ -118,22 +118,59 @@ def trim_video_edges(input_file, start_trim, end_trim, output_file=None, output_
         os.makedirs(output_dir_path)
         print(f"已创建输出文件夹: {output_dir_path}")
     
-    # 使用 ffmpeg 裁剪视频
-    cmd = [
-        'ffmpeg', '-y', '-i', input_file,
-        '-ss', str(start_time),
-        '-t', str(keep_duration),
-        '-c', 'copy',
-        output_file
-    ]
+    # 使用 TS 流模式进行无损精确裁剪
+    temp_dir = os.path.join(input_dir, "trimmed")
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
     
-    print(f"\n执行命令: {' '.join(cmd)}")
+    temp_ts = os.path.join(temp_dir, f"{base_name}_temp.ts")
+    
     try:
-        subprocess.run(cmd, check=True)
-        print(f"\n视频处理成功! 输出文件: {output_file}")
+        # 步骤1: 转换为 TS 容器（无损）
+        print(f"\n使用 TS 流模式进行无损精确裁剪...")
+        print(f"  步骤1: 转换为 TS 容器（无损）...")
+        cmd1 = [
+            'ffmpeg', '-y', '-i', input_file,
+            '-c', 'copy',
+            '-bsf:v', 'h264_mp4toannexb',
+            '-f', 'mpegts',
+            temp_ts
+        ]
+        subprocess.run(cmd1, check=True, capture_output=True)
+        
+        # 步骤2: 在 TS 上精确裁剪
+        print(f"  步骤2: 在 TS 流上进行精确裁剪...")
+        cmd2 = [
+            'ffmpeg', '-y', '-i', temp_ts,
+            '-ss', str(start_time),
+            '-t', str(keep_duration),
+            '-c', 'copy',
+            output_file
+        ]
+        subprocess.run(cmd2, check=True, capture_output=True)
+        
+        # 清理临时文件和目录
+        if os.path.exists(temp_ts):
+            os.remove(temp_ts)
+        try:
+            if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
+        except OSError:
+            pass
+        
+        print(f"\n✅ 视频处理成功! 输出文件: {output_file}")
         return True
+        
     except subprocess.CalledProcessError as e:
         print(f"视频处理失败: {e}")
+        # 清理临时文件
+        if os.path.exists(temp_ts):
+            os.remove(temp_ts)
+        try:
+            if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
+        except OSError:
+            pass
         return False
     except FileNotFoundError:
         print("错误: 未找到 ffmpeg，请确保已安装 ffmpeg 并添加到系统 PATH")

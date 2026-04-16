@@ -57,7 +57,7 @@ def get_video_duration(video_file):
 
 def trim_video(input_file, start_to_cut, end_to_cut, output_dir):
     """
-    裁剪视频开头和结尾的指定时长
+    裁剪视频开头和结尾的指定时长（使用 TS 流模式进行无损精确裁剪）
     
     参数:
         input_file: 输入视频文件
@@ -98,29 +98,56 @@ def trim_video(input_file, start_to_cut, end_to_cut, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
-    # 执行 ffmpeg 裁剪 (使用 -c copy 以保持质量并提高速度，但裁剪点可能不精确)
-    # 如果需要由于裁剪点导致的非常精确，可以使用重编码，但这里按惯例先用 copy
-    cmd = [
-        'ffmpeg', '-y', '-i', input_file,
-        '-ss', str(keep_start),
-        '-t', str(keep_duration),
-        '-c', 'copy',
-        output_file
-    ]
+    # 使用 TS 流模式进行无损精确裁剪
+    temp_dir = os.path.join(output_dir, "trimmed")
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
     
-    print(f"处理中: {base_name}")
-    print(f"  保留范围: {keep_start:.2f}s 到 {keep_end:.2f}s ({keep_duration:.2f}s)")
+    temp_ts = os.path.join(temp_dir, f"{base_name}.ts")
     
     try:
-        # 使用 subprocess.run 并在 Windows 下隐藏窗口 (如果需要)
-        # 这里直接运行，因为是通过 bat 运行的，用户可以看到进度
-        subprocess.run(cmd, check=True, capture_output=True)
-        print(f"  成功: {output_file}")
+        # 步骤1: 转换为 TS 容器（无损）
+        cmd1 = [
+            'ffmpeg', '-y', '-i', input_file,
+            '-c', 'copy',
+            '-bsf:v', 'h264_mp4toannexb',
+            '-f', 'mpegts',
+            temp_ts
+        ]
+        subprocess.run(cmd1, check=True, capture_output=True)
+        
+        # 步骤2: 在 TS 上精确裁剪
+        cmd2 = [
+            'ffmpeg', '-y', '-i', temp_ts,
+            '-ss', str(keep_start),
+            '-t', str(keep_duration),
+            '-c', 'copy',
+            output_file
+        ]
+        subprocess.run(cmd2, check=True, capture_output=True)
+        
+        # 清理临时文件和目录
+        if os.path.exists(temp_ts):
+            os.remove(temp_ts)
+        try:
+            if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
+        except OSError:
+            pass
+        
+        print(f"  ✅ 成功 (TS无损模式): {output_file}")
         return True
+        
     except subprocess.CalledProcessError as e:
-        print(f"  失败: {e}")
-        if e.stderr:
-            print(f"  错误信息: {e.stderr.decode('utf-8', errors='ignore')}")
+        print(f"  ❌ 失败: {e}")
+        # 清理临时文件
+        if os.path.exists(temp_ts):
+            os.remove(temp_ts)
+        try:
+            if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
+        except OSError:
+            pass
         return False
 
 def main():
@@ -156,8 +183,12 @@ def main():
     success = 0
     fail = 0
     
+    print(f"使用 TS 流模式进行无损精确裁剪...")
+    print("-" * 50)
+    
     for f in files:
         input_path = os.path.join(input_dir, f)
+        print(f"处理: {f}")
         if trim_video(input_path, start_to_cut, end_to_cut, output_dir):
             success += 1
         else:

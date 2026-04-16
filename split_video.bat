@@ -1,82 +1,107 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-REM ä¿å­˜å¯åŠ¨å‚æ•°ï¼ˆå¦‚æœæœ‰ï¼‰
+REM Èç¹ûÓĞÃüÁîĞĞ²ÎÊı£¬Ö±½ÓÖ´ĞĞ
 set "startup_arg=%~1"
 
 :main_loop
 cls
 echo ====================================
-echo è§†é¢‘åˆ†å‰²å·¥å…·
+echo ÊÓÆµ·Ö¸î¹¤¾ß
 echo ====================================
-echo åŠŸèƒ½: è¾“å…¥ä¸€ä¸ªæ—¶é—´ç‚¹ï¼Œå°†è§†é¢‘åˆ†å‰²ä¸ºä¸¤éƒ¨åˆ† (_1 å’Œ _2)
+echo ¹¦ÄÜ: ½«ÊÓÆµ°´Ê±¼äµã·Ö¸î³É¶à¶Î£¬Êä³öÎÄ¼şÃû×Ô¶¯¼ÓĞòºÅ (_1, _2, _3 ...)
 echo.
 
-REM å¦‚æœæœ‰å¯åŠ¨å‚æ•°ä¸”æœªå¤„ç†ï¼Œç›´æ¥ä½¿ç”¨
+REM Èç¹ûÓĞÆô¶¯²ÎÊı£¬Ìø¹ıÂ·¾¶ÊäÈë£¨½öÊ×´ÎÉúĞ§£©
 if defined startup_arg (
     set "input_path=!startup_arg!"
-    REM æ¸…ç©ºå¯åŠ¨å‚æ•°ï¼Œé˜²æ­¢æ­»å¾ªç¯ä½¿ç”¨åŒä¸€ä¸ªæ–‡ä»¶
+    REM Çå³ıÆô¶¯²ÎÊı£¬±ÜÃâÑ­»·Ê±ÖØ¸´Ê¹ÓÃ
     set "startup_arg="
     goto input_time
 )
 
 :input_path
 set "input_path="
-set /p input_path="è¯·è¾“å…¥è§†é¢‘æ–‡ä»¶è·¯å¾„(æ”¯æŒç›´æ¥æ‹–å…¥æ–‡ä»¶): "
+set /p input_path="ÇëÊäÈëÊÓÆµÎÄ¼şÂ·¾¶(¿ÉÍÏ×§ÎÄ¼şµ½´Ë´°¿Ú): "
 
 if "!input_path!"=="" (
-    echo é”™è¯¯: è·¯å¾„ä¸èƒ½ä¸ºç©º
+    echo ´íÎó: Â·¾¶²»ÄÜÎª¿Õ
     goto input_path
 )
 
-REM å»é™¤å¼•å·
+REM È¥³ıÒıºÅ
 set input_path=!input_path:"=!
 
 if not exist "!input_path!" (
-    echo é”™è¯¯: è·¯å¾„ä¸å­˜åœ¨
+    echo ´íÎó: ÎÄ¼ş²»´æÔÚ
     goto input_path
 )
 
 :input_time
 echo.
-echo å·²é€‰æ‹©: !input_path!
+echo ÒÑÑ¡Ôñ: !input_path!
 echo.
-echo è¯·è¾“å…¥åˆ†å‰²æ—¶é—´ç‚¹
-echo æ”¯æŒæ ¼å¼: 
-echo   - MM:SS (ä¾‹å¦‚ 1:30)
-echo   - HH:MM:SS (ä¾‹å¦‚ 1:30:05)
-echo   - SS (ä¾‹å¦‚ 90)
+echo ÇëÊäÈë·Ö¸îÊ±¼äµã£¬Ö§³ÖÒÔÏÂ¸ñÊ½:
+echo Ê±¼ä¸ñÊ½: 
+echo   - MM:SS (ÀıÈç 1:30)
+echo   - HH:MM:SS (ÀıÈç 1:30:05)
+echo   - SS (ÀıÈç 90)
+echo   - ¶à¸öÊ±¼äµã: 1:30,3:00,5:20
 echo.
 
 set "split_time="
-set /p split_time="è¯·è¾“å…¥åˆ†å‰²æ—¶é—´: "
+set /p split_time="ÇëÊäÈë·Ö¸îÊ±¼äµã: "
 
 if "!split_time!"=="" (
-    echo é”™è¯¯: æ—¶é—´ä¸èƒ½ä¸ºç©º
+    echo ´íÎó: Ê±¼ä²»ÄÜÎª¿Õ
     goto input_time
 )
 
+:input_mode
+echo.
+echo ·Ö¸îÄ£Ê½:
+echo   1. ¿ìËÙÎŞËğ·Ö¸î£¨¹Ø¼üÖ¡¶ÔÆë£¬ËÙ¶È¼«¿ì£¬¿ÉÄÜÂÔ²»¾«È·£©
+echo   2. ¾«È··Ö¸î£¨Ö¡¼¶¾«È·£¬·Ç¹Ø¼üÖ¡´¦¶ÌÖØ±àÂë£©
+echo.
+set "mode_choice="
+set /p mode_choice="ÇëÑ¡ÔñÄ£Ê½ [1/2] (Ä¬ÈÏ1): "
+
+if "!mode_choice!"=="" set "mode_choice=1"
+if "!mode_choice!"=="1" (
+    set "mode_flag="
+    echo ÒÑÑ¡Ôñ: ¿ìËÙÎŞËğ·Ö¸î
+) else if "!mode_choice!"=="2" (
+    set "mode_flag=--precise"
+    echo ÒÑÑ¡Ôñ: ¾«È··Ö¸î
+) else (
+    echo ´íÎó: ÎŞĞ§Ñ¡Ôñ
+    goto input_mode
+)
+
 echo.
 echo ====================================
-echo å¼€å§‹å¤„ç†...
+echo ¿ªÊ¼·Ö¸î...
 echo Filename: !input_path!
 echo Split Time: !split_time!
+echo Mode: !mode_flag!
 echo ====================================
 
-python split_video.py "!input_path!" "!split_time!"
+python split_video.py "!input_path!" "!split_time!" !mode_flag!
 
 if errorlevel 1 (
     echo.
-    echo å¤„ç†å‡ºé”™!
+    echo ·Ö¸î¹ı³ÌÖĞ³ö´í!
 ) else (
     echo.
     echo ====================================
-    echo å¤„ç†å®Œæˆ!
+    echo ·Ö¸îÍê³É!
     echo ====================================
 )
 
 echo.
-echo æŒ‰ä»»æ„é”®ç»§ç»­å¤„ç†ä¸‹ä¸€ä¸ªæ–‡ä»¶...
-pause >nul
+echo °´»Ø³µ¼ü·µ»Ø¿ªÊ¼£¬»òÊäÈë Q ÍË³ö...
+set /p continue_choice=""
+if /i "!continue_choice!"=="Q" (
+    exit /b
+)
 goto main_loop

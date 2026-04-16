@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 
 REM 视频转 MP4 格式工具 - 启动器
 REM 调用 Python 脚本执行实际转换

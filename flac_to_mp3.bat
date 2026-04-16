@@ -1,10 +1,9 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 where ffmpeg >nul 2>nul
 if errorlevel 1 (
-    echo æœªæ£€æµ‹åˆ° ffmpegï¼Œè¯·å…ˆå®‰è£…å¹¶åŠ å…¥ PATHã€‚
+    echo Î´¼ì²âµ½ ffmpeg£¬ÇëÏÈ°²×°²¢¼ÓÈë PATH¡£
     pause
     exit /b 1
 )
@@ -13,10 +12,10 @@ set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
 echo ========================================
-echo FLAC/éŸ³é¢‘ è½¬ MP3 å·¥å…·
+echo FLAC/ÒôÆµ ×ª MP3 ¹¤¾ß
 echo ========================================
 echo.
-echo æ”¯æŒæ ¼å¼: flac, ape, wav, m4a, aac, ogg, opus, wma ç­‰
+echo Ö§³Ö¸ñÊ½: flac, ape, wav, m4a, aac, ogg, opus, wma µÈ
 echo.
 
 set "count=0"
@@ -27,13 +26,13 @@ for /r "%SCRIPT_DIR%" %%f in (*.flac *.ape *.wav *.m4a *.aac *.ogg *.oga *.opus 
     set "output=%%~dpnf.mp3"
     
     if exist "!output!" (
-        echo è·³è¿‡(å·²å­˜åœ¨): %%~nxf
+        echo Ìø¹ı(ÒÑ´æÔÚ): %%~nxf
     ) else (
         set /a count+=1
-        echo è½¬æ¢ä¸­: %%~nxf -^> %%~nf.mp3
+        echo ×ª»»ÖĞ: %%~nxf -^> %%~nf.mp3
         ffmpeg -hide_banner -y -i "!input!" -map_metadata 0 -codec:a libmp3lame -q:a 0 -id3v2_version 3 "!output!" >nul 2>&1
         if errorlevel 1 (
-            echo   [å¤±è´¥] %%~nxf
+            echo   [Ê§°Ü] %%~nxf
             set /a failed+=1
         )
     )
@@ -42,9 +41,9 @@ for /r "%SCRIPT_DIR%" %%f in (*.flac *.ape *.wav *.m4a *.aac *.ogg *.oga *.opus 
 echo.
 echo ========================================
 if !count! equ 0 (
-    echo æ²¡æœ‰æ‰¾åˆ°éœ€è¦è½¬æ¢çš„éŸ³é¢‘æ–‡ä»¶ã€‚
+    echo Ã»ÓĞÕÒµ½ĞèÒª×ª»»µÄÒôÆµÎÄ¼ş¡£
 ) else (
-    echo è½¬æ¢å®Œæˆ: !count! ä¸ªæ–‡ä»¶ï¼Œå¤±è´¥: !failed! ä¸ªã€‚
+    echo ×ª»»Íê³É: !count! ¸öÎÄ¼ş£¬Ê§°Ü: !failed! ¸ö¡£
 )
 echo ========================================
 echo.

@@ -1,78 +1,77 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-REM äº¤äº’å¼æ¨¡å¼ - ä¸»å¾ªçŽ¯
+REM ½»»¥Ê½Ä£Ê½ - Ö÷Ñ­»·
 :main_loop
 cls
 echo ====================================
-echo å­—å¹•æ–‡ä»¶åŽç¼€ä¿®æ”¹å·¥å…·
+echo ×ÖÄ»ÎÄ¼þºó×ºÐÞ¸Ä¹¤¾ß
 echo ====================================
 echo.
-echo åŠŸèƒ½: å°†å­—å¹•æ–‡ä»¶(å¦‚ .srt) åŽç¼€ä¿®æ”¹ä¸º .srt.txt
-echo ç¤ºä¾‹: 1.srt -^> 1.srt.txt
-echo æ”¯æŒå¤„ç†å•ä¸ªæ–‡ä»¶ or æ•´ä¸ªæ–‡ä»¶å¤¹(å«å­ç›®å½•)
+echo ¹¦ÄÜ: ½«×ÖÄ»ÎÄ¼þ(Èç .srt) ºó×ºÐÞ¸ÄÎª .srt.txt
+echo Ê¾Àý: 1.srt -^> 1.srt.txt
+echo Ö§³Ö´¦Àíµ¥¸öÎÄ¼þ or Õû¸öÎÄ¼þ¼Ð(º¬×ÓÄ¿Â¼)
 echo.
 
 :input_path
 set "input_path="
-set /p input_path="è¯·è¾“å…¥æ–‡ä»¶æˆ–æ–‡ä»¶å¤¹è·¯å¾„(å¯æ‹–å…¥): "
+set /p input_path="ÇëÊäÈëÎÄ¼þ»òÎÄ¼þ¼ÐÂ·¾¶(¿ÉÍÏÈë): "
 
 if "!input_path!"=="" (
     goto input_path
 )
 
-REM åŽ»é™¤å¼•å·
+REM È¥³ýÒýºÅ
 set input_path=!input_path:"=!
 
 if not exist "!input_path!" (
     echo.
-    echo é”™è¯¯: è·¯å¾„ä¸å­˜åœ¨
+    echo ´íÎó: Â·¾¶²»´æÔÚ
     echo.
     goto input_path
 )
 
 echo.
-echo æ­£åœ¨å¤„ç†: "!input_path!"
+echo ÕýÔÚ´¦Àí: "!input_path!"
 echo.
 
-REM åˆ¤æ–­æ˜¯æ–‡ä»¶è¿˜æ˜¯æ–‡ä»¶å¤¹
+REM ÅÐ¶ÏÊÇÎÄ¼þ»¹ÊÇÎÄ¼þ¼Ð
 if exist "!input_path!\" (
-    REM æ˜¯æ–‡ä»¶å¤¹
+    REM ÊÇÎÄ¼þ¼Ð
     pushd "!input_path!"
     set "count=0"
     
-    REM éåŽ†å¸¸è§çš„å­—å¹•æ ¼å¼ (æ”¯æŒé€’å½’)
+    REM ±éÀú³£¼ûµÄ×ÖÄ»¸ñÊ½ (Ö§³ÖµÝ¹é)
     for %%x in (srt ass vtt lrc) do (
         for /r %%f in (*.%%x) do (
-             echo é‡å‘½å: "%%f" -^> "%%~nxf.txt"
+             echo ÖØÃüÃû: "%%f" -^> "%%~nxf.txt"
              ren "%%f" "%%~nxf.txt"
              set /a count+=1
         )
     )
     popd
     echo.
-    echo æ–‡ä»¶å¤¹å¤„ç†å®Œæˆï¼Œå…±å¤„ç† !count! ä¸ªæ–‡ä»¶ã€‚
+    echo ÎÄ¼þ¼Ð´¦ÀíÍê³É£¬¹²´¦Àí !count! ¸öÎÄ¼þ¡£
 ) else (
-    REM æ˜¯å•ä¸ªæ–‡ä»¶
-    REM èŽ·å–æ–‡ä»¶æ‰€åœ¨çš„ç›®å½•å’Œæ–‡ä»¶å
+    REM ÊÇµ¥¸öÎÄ¼þ
+    REM »ñÈ¡ÎÄ¼þËùÔÚµÄÄ¿Â¼ºÍÎÄ¼þÃû
     for %%F in ("!input_path!") do (
         set "filename=%%~nxF"
         set "parent_dir=%%~dpF"
     )
     
     pushd "!parent_dir!"
-    echo é‡å‘½å: "!filename!" -^> "!filename!.txt"
+    echo ÖØÃüÃû: "!filename!" -^> "!filename!.txt"
     ren "!filename!" "!filename!.txt"
     popd
     
     echo.
-    echo å•ä¸ªæ–‡ä»¶å¤„ç†å®Œæˆã€‚
+    echo µ¥¸öÎÄ¼þ´¦ÀíÍê³É¡£
 )
 
 echo.
 echo ====================================
-echo æŒ‰å›žè½¦é”®è¿”å›žå¼€å§‹ï¼Œæˆ–è¾“å…¥ Q é€€å‡º...
+echo °´»Ø³µ¼ü·µ»Ø¿ªÊ¼£¬»òÊäÈë Q ÍË³ö...
 set /p continue_choice=""
 if /i "!continue_choice!"=="Q" (
     exit /b

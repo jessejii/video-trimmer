@@ -140,7 +140,9 @@ def removed_before(t: int, ranges: List[Tuple[int, int]]) -> int:
     return total
 
 
-def subtract_ranges(a: int, b: int, ranges: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+def subtract_ranges(
+    a: int, b: int, ranges: List[Tuple[int, int]]
+) -> List[Tuple[int, int]]:
     """从区间 [a,b) 中扣掉删除区间，返回保留子区间列表。"""
     keep: List[Tuple[int, int]] = []
     cur = a
@@ -195,7 +197,10 @@ def write_srt(cues: List[Cue], path: str) -> None:
 
 
 def build_default_output(input_path: str) -> str:
-    base, _ = os.path.splitext(input_path)
+    normalized = input_path
+    if input_path.lower().endswith(".srt.txt"):
+        normalized = input_path[:-4]  # 去掉末尾 .txt，保留 .srt
+    base, _ = os.path.splitext(normalized)
     return f"{base}_removed.srt"
 
 
@@ -232,7 +237,9 @@ def main() -> int:
     write_srt(new_cues, output)
 
     print(f"处理完成: {args.input}")
-    print(f"删除区间: {', '.join(f'{ms_to_srt(s)}-{ms_to_srt(e)}' for s, e in remove_ranges)}")
+    print(
+        f"删除区间: {', '.join(f'{ms_to_srt(s)}-{ms_to_srt(e)}' for s, e in remove_ranges)}"
+    )
     print(f"原字幕条数: {len(cues)}")
     print(f"新字幕条数: {len(new_cues)}")
     print(f"输出文件: {output}")

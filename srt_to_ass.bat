@@ -1,27 +1,26 @@
 @echo off
-chcp 65001 >nul
 
 :start
 cls
 echo ================================
-echo    SRTè½¬ASSå­—å¹•æ ¼å¼è½¬æ¢å·¥å…·
+echo    SRT×ªASS×ÖÄ»¸ñÊ½×ª»»¹¤¾ß
 echo ================================
 echo.
 
 if "%~1"=="" (
-    set /p srt_file="è¯·è¾“å…¥SRTæ–‡ä»¶è·¯å¾„ (è¾“å…¥ q é€€å‡º): "
+    set /p srt_file="ÇëÊäÈëSRTÎÄ¼þÂ·¾¶ (ÊäÈë q ÍË³ö): "
 ) else (
     set srt_file=%~1
     set first_run=1
 )
 
 if /i "%srt_file%"=="q" (
-    echo é€€å‡ºç¨‹åº...
+    echo ÍË³ö³ÌÐò...
     exit /b 0
 )
 
 if not exist "%srt_file%" (
-    echo é”™è¯¯: æ–‡ä»¶ä¸å­˜åœ¨
+    echo ´íÎó: ÎÄ¼þ²»´æÔÚ
     echo.
     pause
     goto start
@@ -34,7 +33,7 @@ if defined first_run (
     pause
     exit /b 0
 ) else (
-    echo æŒ‰ä»»æ„é”®è¿”å›žå¼€å§‹...
+    echo °´ÈÎÒâ¼ü·µ»Ø¿ªÊ¼...
     pause >nul
 )
 

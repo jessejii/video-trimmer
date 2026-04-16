@@ -1,8 +1,7 @@
 @echo off
-chcp 65001 >nul
 :start
 python merge_videos.py
 echo.
-echo æŒ‰å›žè½¦é”®ç»§ç»­å¤„ç†ï¼Œæˆ–å…³é—­çª—å£é€€å‡º...
+echo °´»Ø³µ¼ü¼ÌÐø´¦Àí£¬»ò¹Ø±Õ´°¿ÚÍË³ö...
 pause >nul
 goto start
