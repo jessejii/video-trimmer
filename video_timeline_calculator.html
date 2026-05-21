@@ -287,11 +287,11 @@
                 let description;
                 
                 if (ad.isLastAd) {
-                    endDisplay = `<span class="time-tag" onclick="copyToClipboard('${ad.startStr}')" title="点击复制">${ad.startStr}</span> – 结尾`;
+                    endDisplay = `<span class="time-tag" onclick="copyToClipboard(event, '${ad.startStr}')" title="点击复制">${ad.startStr}</span> – 结尾`;
                     description = `第${index + 1}个广告段 ${endDisplay}。`;
                 } else {
                     totalReduction += duration;
-                    endDisplay = `<span class="time-tag" onclick="copyToClipboard('${ad.startStr}')" title="点击复制">${ad.startStr}</span> – <span class="time-tag" onclick="copyToClipboard('${ad.endStr}')" title="点击复制">${ad.endStr}</span>`;
+                    endDisplay = `<span class="time-tag" onclick="copyToClipboard(event, '${ad.startStr}')" title="点击复制">${ad.startStr}</span> – <span class="time-tag" onclick="copyToClipboard(event, '${ad.endStr}')" title="点击复制">${ad.endStr}</span>`;
                     description = `第${index + 1}个广告段 ${endDisplay}，共 ${durationStr}，之后的时间${index === 0 ? '全部' : '再额外'}减去 ${durationStr}${index > 0 ? `（总计减去 ${secondsToTime(totalReduction)}）` : ''}。`;
                 }
                 
@@ -350,25 +350,34 @@
             document.getElementById('resultSection').style.display = 'block';
         }
 
+        let isCopying = false;
+
+        function safeWriteClipboard(text) {
+            if (isCopying) return;
+            isCopying = true;
+            navigator.clipboard.writeText(text).then(() => {
+                setTimeout(() => { isCopying = false; }, 600);
+            }).catch(() => {
+                isCopying = false;
+            });
+        }
+
         function copyResult() {
             const resultText = document.getElementById('resultText').textContent;
-            navigator.clipboard.writeText(resultText).then(() => {
-                showCopyStatus('copyResultStatus');
-            });
+            safeWriteClipboard(resultText);
+            showCopyStatus('copyResultStatus');
         }
 
         function copyCalculation() {
             const calculationText = document.getElementById('calculationMethod').textContent;
-            navigator.clipboard.writeText(calculationText).then(() => {
-                showCopyStatus('copyCalculationStatus');
-            });
+            safeWriteClipboard(calculationText);
+            showCopyStatus('copyCalculationStatus');
         }
 
         function copyAdFields() {
             const adFieldsText = document.getElementById('adFields').textContent;
-            navigator.clipboard.writeText(adFieldsText).then(() => {
-                showCopyStatus('copyAdFieldsStatus');
-            });
+            safeWriteClipboard(adFieldsText);
+            showCopyStatus('copyAdFieldsStatus');
         }
 
         function showCopyStatus(statusId) {
@@ -379,30 +388,39 @@
             }, 2000);
         }
 
-        function copyToClipboard(text) {
+        function copyToClipboard(event, text) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            if (isCopying) return;
+            isCopying = true;
             navigator.clipboard.writeText(text).then(() => {
-                const toast = document.createElement('div');
-                toast.textContent = '已复制: ' + text;
-                toast.style.position = 'fixed';
-                toast.style.bottom = '20px';
-                toast.style.left = '50%';
-                toast.style.transform = 'translateX(-50%)';
-                toast.style.backgroundColor = 'rgba(0,0,0,0.8)';
-                toast.style.color = 'white';
-                toast.style.padding = '8px 16px';
-                toast.style.borderRadius = '4px';
-                toast.style.zIndex = '1000';
-                toast.style.fontSize = '14px';
-                toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                toast.style.transition = 'opacity 0.3s';
-                
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 300);
-                }, 1500);
+                setTimeout(() => { isCopying = false; }, 600);
+            }).catch(() => {
+                isCopying = false;
             });
+            const toast = document.createElement('div');
+            toast.textContent = '已复制: ' + text;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.backgroundColor = 'rgba(0,0,0,0.8)';
+            toast.style.color = 'white';
+            toast.style.padding = '8px 16px';
+            toast.style.borderRadius = '4px';
+            toast.style.zIndex = '1000';
+            toast.style.fontSize = '14px';
+            toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            toast.style.transition = 'opacity 0.3s';
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 1500);
         }
     </script>
 </body>

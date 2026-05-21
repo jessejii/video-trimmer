@@ -344,8 +344,6 @@ def split_video(
             num_parts,
             dir_name,
             name_without_ext,
-            ext,
-            split_times,
         )
 
 
@@ -419,107 +417,61 @@ def _split_fast(
     num_parts: int,
     dir_name: str,
     name_without_ext: str,
-    ext: str,
-    split_times: List[float],
 ) -> bool:
     """
-    快速无损分割：copy 分割
-    优先尝试 segment muxer，失败回退逐段 copy
+    快速无损分割：参考 remove_segments 的 TS 流方式
+    逐段裁剪为 TS，再逐段转封装为目标文件（不重编码）
     """
-    # 方式1: segment muxer
+    temp_dir = os.path.join(dir_name if dir_name else ".", "trimmed_split")
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
+
+    temp_ts_files: List[str] = []
     try:
-        print("\n使用 segment muxer 进行快速无损分割...")
-
-        segment_times_str = ",".join(str(t) for t in split_times)
-
-        # 修复命名冲突：先输出到临时前缀 __seg_tmp__%d，再原子重命名为最终文件名
-        tmp_pattern = os.path.join(dir_name, f"{name_without_ext}.__seg_tmp__.%d{ext}")
-        tmp_outputs = [
-            os.path.join(dir_name, f"{name_without_ext}.__seg_tmp__.{i}{ext}")
-            for i in range(num_parts)
-        ]
-
-        cmd_segment = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            input_file,
-            "-c",
-            "copy",
-            "-f",
-            "segment",
-            "-segment_times",
-            segment_times_str,
-            "-reset_timestamps",
-            "1",
-            "-segment_format",
-            ext.lstrip("."),
-            tmp_pattern,
-        ]
-
-        result = subprocess.run(cmd_segment, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            raise subprocess.CalledProcessError(
-                result.returncode, cmd_segment, result.stderr
-            )
-
-        # 校验临时文件
-        for p in tmp_outputs:
-            if not os.path.exists(p):
-                raise subprocess.CalledProcessError(1, cmd_segment, "分段输出数量不足")
-
-        # 清理目标同名旧文件，避免 rename 冲突
+        print("\n使用 TS 流逐段裁剪 + 逐段转封装进行快速无损分割...")
         _cleanup_files(output_files)
 
-        # 重命名临时文件 -> 最终文件（1-based）
-        for i, tmp_path in enumerate(tmp_outputs, start=1):
-            final_path = os.path.join(dir_name, f"{name_without_ext}_{i}{ext}")
-            os.replace(tmp_path, final_path)
-
-        print(f"\n✅ 分割完成! 共 {num_parts} 段")
-        print("输出文件:")
-        for i, f in enumerate(output_files):
-            start, end = segments[i]
-            print(f"  {i + 1}. {f} ({start:.2f}s - {end:.2f}s)")
-        return True
-
-    except (subprocess.CalledProcessError, Exception):
-        print("  segment muxer 分割失败，回退到逐段分割模式...")
-        # 清理临时段
-        for i in range(num_parts):
-            tmp_path = os.path.join(
-                dir_name, f"{name_without_ext}.__seg_tmp__.{i}{ext}"
-            )
-            if os.path.exists(tmp_path):
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
-
-    # 方式2: 逐段 copy
-    try:
-        print("\n使用逐段无损分割...")
-        _cleanup_files(output_files)
-
+        # 先逐段裁剪为 TS（copy，-ss 在 -i 后确保时间更贴近请求点）
         for i, (start, end) in enumerate(segments):
-            print(f"  生成第 {i + 1}/{num_parts} 部分 ({start:.2f}s - {end:.2f}s)...")
-            cmd = [
+            print(f"  提取第 {i + 1}/{num_parts} 段 TS ({start:.2f}s - {end:.2f}s)...")
+            temp_ts = os.path.join(temp_dir, f"{name_without_ext}_seg_{i:03d}.ts")
+            cmd_ts = [
                 "ffmpeg",
                 "-y",
-                "-ss",
-                str(start),
                 "-i",
                 input_file,
+                "-ss",
+                str(start),
                 "-t",
                 str(max(0.0, end - start)),
                 "-c",
                 "copy",
+                "-bsf:v",
+                "h264_mp4toannexb",
+                "-f",
+                "mpegts",
                 "-avoid_negative_ts",
                 "make_zero",
+                temp_ts,
+            ]
+            subprocess.run(cmd_ts, check=True, capture_output=True)
+            temp_ts_files.append(temp_ts)
+
+        # 再把每段 TS 转封装为目标输出文件（不重编码）
+        for i, ts_file in enumerate(temp_ts_files):
+            print(f"  转封装第 {i + 1}/{num_parts} 段 -> {output_files[i]} ...")
+            cmd_mux = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                ts_file,
+                "-c",
+                "copy",
+                "-movflags",
+                "+faststart",
                 output_files[i],
             ]
-            subprocess.run(cmd, check=True, capture_output=True)
+            subprocess.run(cmd_mux, check=True, capture_output=True)
 
         print(f"\n✅ 分割完成! 共 {num_parts} 段")
         print("输出文件:")
@@ -535,6 +487,19 @@ def _split_fast(
     except FileNotFoundError:
         print("\n错误: 未找到 ffmpeg，请确保已安装 ffmpeg 并添加到系统 PATH")
         return False
+    finally:
+        # 清理临时 TS 文件与目录
+        for ts_file in temp_ts_files:
+            if os.path.exists(ts_file):
+                try:
+                    os.remove(ts_file)
+                except Exception:
+                    pass
+        try:
+            if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
+        except OSError:
+            pass
 
 
 def _cleanup_files(files: List[str]) -> None:

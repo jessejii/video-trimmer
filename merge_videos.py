@@ -156,19 +156,21 @@ def merge_videos_convert(directory, video_files, output_file, encoder="cpu"):
 
 
 def merge_videos_fast_ts(directory, video_files, output_file):
-    """模式4：TS 流快速合并（先转 TS 流再 concat，速度快且兼容性优于 MP4 直接拼接）"""
+    """模式1：TS 流快速合并（先逐文件转 TS，再 TS concat，最后 remux 到 MP4）"""
     temp_dir = os.path.join(directory, "temp")
 
     # 创建临时目录
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
 
+    ts_files = []
+    concat_ts = os.path.join(temp_dir, "concat_all.ts")
+    list_file = os.path.join(temp_dir, "filelist.txt")
+
     try:
-        ts_files = []
+        print(f"\n⚡ 开始转换为 TS 流（remove_segments 同款策略）...")
 
-        print(f"\n⚡ 开始转换为 TS 流（直接复制流）...")
-
-        # 转换每个视频为 TS（不重编码）
+        # 逐文件转 TS（不重编码），并统一时间戳处理以提升拼接稳定性
         for i, video in enumerate(video_files, 1):
             input_path = os.path.join(directory, video)
             ts_output = os.path.join(temp_dir, f"temp_{i:03d}.ts")
@@ -176,14 +178,12 @@ def merge_videos_fast_ts(directory, video_files, output_file):
             print(f"  [{i}/{len(video_files)}] 转换中: {video}")
 
             ext = os.path.splitext(video)[1].lower()
-            # MP4/MOV 常见为 AVC/HEVC，需要转换为 AnnexB；其他容器通常无需该步骤
-            v_bsf = None
-            if ext in (".mp4", ".mov", ".m4v"):
-                # 先尝试 H.264 的 bitstream filter；失败再回退 HEVC（见下方重试逻辑）
-                v_bsf = "h264_mp4toannexb"
+            # MP4/MOV/M4V 常见 AVC/HEVC，需要转 AnnexB；其他容器通常可直接 copy 到 TS
+            v_bsf = "h264_mp4toannexb" if ext in (".mp4", ".mov", ".m4v") else None
 
             cmd = [
                 "ffmpeg",
+                "-y",
                 "-i",
                 input_path,
                 "-c",
@@ -194,7 +194,8 @@ def merge_videos_fast_ts(directory, video_files, output_file):
             cmd += [
                 "-f",
                 "mpegts",
-                "-y",
+                "-avoid_negative_ts",
+                "make_zero",
                 ts_output,
             ]
 
@@ -202,12 +203,14 @@ def merge_videos_fast_ts(directory, video_files, output_file):
                 cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore"
             )
 
-            # 对 MP4/MOV 输入增加一次 HEVC 回退重试，提升兼容性
+            # 对 MP4/MOV/M4V 输入增加一次 HEVC 回退重试，提升兼容性
             if result.returncode != 0 and v_bsf == "h264_mp4toannexb":
                 if os.path.exists(ts_output):
                     os.remove(ts_output)
+
                 retry_cmd = [
                     "ffmpeg",
+                    "-y",
                     "-i",
                     input_path,
                     "-c",
@@ -216,7 +219,8 @@ def merge_videos_fast_ts(directory, video_files, output_file):
                     "hevc_mp4toannexb",
                     "-f",
                     "mpegts",
-                    "-y",
+                    "-avoid_negative_ts",
+                    "make_zero",
                     ts_output,
                 ]
                 result = subprocess.run(
@@ -234,18 +238,16 @@ def merge_videos_fast_ts(directory, video_files, output_file):
                 print(f"  ❌ 转换失败: {video}")
                 raise Exception(f"转换失败: {video}")
 
-        print(f"\n🚀 开始拼接 TS 流...")
+        print(f"\n🚀 开始拼接 TS 流到单一 TS...")
 
-        list_file = os.path.join(temp_dir, "filelist.txt")
+        # 使用 concat demuxer 先拼接为一个 TS（与 remove_segments 一致）
         with open(list_file, "w", encoding="utf-8") as f:
             for ts_file in ts_files:
-                escaped_path = ts_file.replace("\\", "/").replace("'", "'\\''")
-                f.write(f"file '{escaped_path}'\n")
+                f.write(f"file '{os.path.abspath(ts_file)}'\n")
 
-        # 使用 concat demuxer 拼接 TS
-        # 先尝试带 AAC bitstream filter；若音频并非 AAC 或不需要该过滤器则回退
-        cmd = [
+        cmd_concat_ts = [
             "ffmpeg",
+            "-y",
             "-f",
             "concat",
             "-safe",
@@ -254,28 +256,52 @@ def merge_videos_fast_ts(directory, video_files, output_file):
             list_file,
             "-c",
             "copy",
+            "-f",
+            "mpegts",
+            concat_ts,
+        ]
+
+        result_concat = subprocess.run(
+            cmd_concat_ts,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+        )
+        if result_concat.returncode != 0:
+            return False, result_concat.stderr
+
+        print("📦 正在将合并后的 TS remux 为 MP4...")
+
+        # 再把 TS remux 到 MP4；优先使用 AAC 过滤器，失败则回退
+        cmd_mp4 = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            concat_ts,
+            "-c",
+            "copy",
             "-bsf:a",
             "aac_adtstoasc",
-            "-y",
+            "-movflags",
+            "+faststart",
             output_file,
         ]
 
         result = subprocess.run(
-            cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore"
+            cmd_mp4, capture_output=True, text=True, encoding="utf-8", errors="ignore"
         )
 
         if result.returncode != 0:
             fallback_cmd = [
                 "ffmpeg",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
+                "-y",
                 "-i",
-                list_file,
+                concat_ts,
                 "-c",
                 "copy",
-                "-y",
+                "-movflags",
+                "+faststart",
                 output_file,
             ]
             result = subprocess.run(
@@ -287,7 +313,11 @@ def merge_videos_fast_ts(directory, video_files, output_file):
             )
 
         success = result.returncode == 0
+        return success, result.stderr
 
+    except Exception as e:
+        raise e
+    finally:
         # 清理临时文件
         print(f"\n🧹 清理临时文件...")
         for ts_file in ts_files:
@@ -295,18 +325,13 @@ def merge_videos_fast_ts(directory, video_files, output_file):
                 os.remove(ts_file)
         if os.path.exists(list_file):
             os.remove(list_file)
-        if os.path.exists(temp_dir):
-            os.rmdir(temp_dir)
-
-        return success, result.stderr
-
-    except Exception as e:
-        # 清理临时文件
-        if os.path.exists(temp_dir):
-            for file in os.listdir(temp_dir):
-                os.remove(os.path.join(temp_dir, file))
-            os.rmdir(temp_dir)
-        raise e
+        if os.path.exists(concat_ts):
+            os.remove(concat_ts)
+        try:
+            if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
+        except OSError:
+            pass
 
 
 def merge_videos_direct_gpu(directory, video_files, output_file):
