@@ -92,10 +92,43 @@ def get_video_duration(video_file):
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
         return float(result.stdout.strip())
+    except subprocess.CalledProcessError as e:
+        print(f"获取视频时长失败: {e}")
+        if e.stderr:
+            print(f"  ffprobe stderr: {e.stderr.strip()}")
+        return None
     except Exception as e:
         print(f"获取视频时长失败: {e}")
+        return None
+
+
+def get_video_codec(video_file):
+    """
+    获取视频的视频编码格式
+
+    参数:
+        video_file: 视频文件路径
+
+    返回:
+        视频编码名称（小写），例如 "h264", "hevc", "vp9"；无视频流则返回 None
+    """
+    cmd = [
+        "ffprobe",
+        "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=codec_name",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        video_file,
+    ]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+        codec = result.stdout.strip().lower()
+        return codec if codec else None
+    except Exception as e:
+        print(f"获取视频编码失败: {e}")
         return None
 
 
@@ -175,6 +208,13 @@ def remove_video_segments(
 
     print(f"\n视频总时长: {duration:.2f}s ({duration / 60:.2f}min)")
 
+    # 获取视频编码（用于诊断信息）
+    video_codec = get_video_codec(input_file)
+    if video_codec:
+        print(f"视频编码: {video_codec}")
+    else:
+        print("警告: 无法检测视频编码，可能没有视频流")
+
     # 解析要删除的时间段
     try:
         remove_segments = parse_segments(remove_segments_str, duration)
@@ -213,7 +253,7 @@ def remove_video_segments(
     def run_srt_sync_with_actual_removed_csv(actual_removed_csv):
         """
         自动同步同名字幕（优先 .srt，其次 .srt.txt）。
-        使用 remove_srt_segments.py，并将“实际删除片段CSV”作为 ranges 传入。
+        使用 remove_srt_segments.py，并将"实际删除片段CSV"作为 ranges 传入。
         """
         base_no_ext = os.path.splitext(input_file)[0]
         candidate_srt_files = [f"{base_no_ext}.srt", f"{base_no_ext}.srt.txt"]
@@ -247,7 +287,7 @@ def remove_video_segments(
 
         print(f"自动同步字幕命令: {' '.join(cmd_srt)}")
         try:
-            subprocess.run(cmd_srt, check=True, capture_output=True, text=True)
+            subprocess.run(cmd_srt, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
             print(f"字幕已同步输出: {output_srt}")
         except subprocess.CalledProcessError as e:
             print("自动同步字幕失败:")
@@ -278,67 +318,47 @@ def remove_video_segments(
     for start, end in keep_segments:
         print(f"  {start:.2f}s - {end:.2f}s ({start / 60:.2f}min - {end / 60:.2f}min)")
 
-    # 如果只有一个保留段，使用 TS 流方式裁剪
+    # 辅助函数：运行 ffmpeg 命令，失败时打印完整错误信息
+    def run_ffmpeg(cmd, description=""):
+        print(f"\n{description}: {' '.join(cmd)}")
+        try:
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+            return result
+        except subprocess.CalledProcessError as e:
+            print(f"FFmpeg 执行失败 (返回码 {e.returncode}):")
+            if e.stdout:
+                print("  stdout:", e.stdout.strip())
+            if e.stderr:
+                print("  stderr:", e.stderr.strip())
+            raise
+
+    # 如果只有一个保留段，直接裁剪为 MP4（无需 TS 中间步骤）
     if len(keep_segments) == 1:
         start, end = keep_segments[0]
         duration_seg = end - start
 
-        # 先转为 TS 格式裁剪（TS 天然支持流级拼接，避免关键帧问题）
-        # 注意: -ss 放在 -i 之后（output seeking），确保精确裁切，与字幕时间对齐
-        temp_ts = os.path.join(input_dir, f"{base_name}_temp.ts")
-        cmd_ts = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            input_file,
-            "-ss",
-            str(start),
-            "-t",
-            str(duration_seg),
-            "-c",
-            "copy",
-            "-bsf:v",
-            "h264_mp4toannexb",
-            "-f",
-            "mpegts",
-            "-avoid_negative_ts",
-            "make_zero",
-            temp_ts,
-        ]
-
-        # 再将 TS 转回 MP4（remux，不重编码）
-        cmd_mp4 = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            temp_ts,
-            "-c",
-            "copy",
-            "-movflags",
-            "+faststart",
+        # 直接裁剪为 MP4，-ss 放在 -i 之前使用关键帧快速跳转，避免开头黑屏
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", str(start),
+            "-i", input_file,
+            "-t", str(duration_seg),
+            "-c", "copy",
+            "-avoid_negative_ts", "make_zero",
             output_file,
         ]
 
-        print(f"\n执行命令 (TS裁剪): {' '.join(cmd_ts)}")
-        print(f"执行命令 (TS转MP4): {' '.join(cmd_mp4)}")
         try:
-            subprocess.run(cmd_ts, check=True, capture_output=True)
-            # 先探测 TS 片段实际时长，再转 MP4/清理临时文件
-            actual_single_duration = get_video_duration(temp_ts)
-            subprocess.run(cmd_mp4, check=True, capture_output=True)
+            run_ffmpeg(cmd, description="直接裁剪 MP4")
 
-            # 清理临时 TS 文件
-            if os.path.exists(temp_ts):
-                os.remove(temp_ts)
-
-            # 输出单片段模式下的实际保留片段边界 CSV
+            actual_single_duration = get_video_duration(output_file)
             if actual_single_duration is not None:
                 actual_single_segments = [(start, start + actual_single_duration)]
             else:
                 actual_single_segments = [(start, end)]
             print(f"保留片段边界CSV(实际): {segments_to_csv(actual_single_segments)}")
 
-            # 输出单片段模式下的实际删除片段边界 CSV
+            # 输出实际删除片段边界 CSV
             actual_removed_segments = []
             if actual_single_segments and actual_single_segments[0][0] > 0:
                 actual_removed_segments.append((0.0, actual_single_segments[0][0]))
@@ -350,17 +370,12 @@ def remove_video_segments(
             print(f"删除片段边界CSV(实际): {actual_removed_csv}")
             run_srt_sync_with_actual_removed_csv(actual_removed_csv)
 
-            # 如果需要替换原文件
             if replace_original:
                 final_output = os.path.join(input_dir, f"{base_name}_processed.mp4")
-                # 不删除原文件，直接重命名输出文件
-                # if os.path.exists(input_file):
-                #     os.remove(input_file)
                 try:
                     os.replace(output_file, final_output)
                 except PermissionError:
                     import time
-
                     time.sleep(0.5)
                     os.replace(output_file, final_output)
                 print(f"\n视频处理成功! 输出文件: {final_output}")
@@ -368,108 +383,83 @@ def remove_video_segments(
             else:
                 print(f"\n视频处理成功! 输出文件: {output_file}")
             return True
-        except subprocess.CalledProcessError as e:
-            print(f"视频处理失败: {e}")
-            if os.path.exists(temp_ts):
-                os.remove(temp_ts)
+        except subprocess.CalledProcessError:
             if replace_original and os.path.exists(output_file):
                 os.remove(output_file)
             return False
 
-    # 多个保留段，使用 TS 流无损拼接
+    # 多个保留段：
+    #   - 若输入是 .ts 文件，先提取为 .ts 中间片段，再 concat 转 MP4
+    #     （.ts 不依赖 moov atom，-c copy + pre-seek 对 .ts 输入最可靠）
+    #   - 若输入是其他格式（mp4/mkv 等），直接提取为 .mp4 再 concat
+    input_ext = os.path.splitext(input_file)[1].lower()
+    use_ts_intermediate = (input_ext == ".ts")
+    seg_ext = ".ts" if use_ts_intermediate else ".mp4"
+
     temp_dir = os.path.join(input_dir, "trimmed")
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
 
-    temp_ts_files = []
-    temp_concat_ts = os.path.join(temp_dir, f"{base_name}_concat.ts")
+    temp_seg_files = []
     concat_list_file = os.path.join(temp_dir, f"{base_name}_concat_list.txt")
 
     try:
-        # 提取每个保留段为 TS 格式
-        # 注意: -ss 放在 -i 之后（output seeking），确保精确裁切，与字幕时间对齐
-        print(f"\n开始提取视频片段 (TS流模式)...")
+        # 提取每个保留段为独立临时文件
+        mode_label = "TS中间格式" if use_ts_intermediate else "MP4"
+        print(f"\n开始提取视频片段 ({mode_label}模式)...")
         for i, (start, end) in enumerate(keep_segments):
-            temp_ts = os.path.join(temp_dir, f"segment_{i:03d}.ts")
+            temp_seg = os.path.join(temp_dir, f"segment_{i:03d}{seg_ext}")
             duration_seg = end - start
 
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-i",
-                input_file,
-                "-ss",
-                str(start),
-                "-t",
-                str(duration_seg),
-                "-c",
-                "copy",
-                "-bsf:v",
-                "h264_mp4toannexb",
-                "-f",
-                "mpegts",
-                "-avoid_negative_ts",
-                "make_zero",
-                temp_ts,
+                "ffmpeg", "-y",
+                "-ss", str(start),
+                "-i", input_file,
+                "-t", str(duration_seg),
+                "-c", "copy",
+                "-avoid_negative_ts", "make_zero",
             ]
+            if use_ts_intermediate:
+                # 强制输出为 mpegts 格式，避免 mp4 moov atom 问题
+                cmd += ["-f", "mpegts"]
+            cmd.append(temp_seg)
 
-            print(f"  提取片段 {i + 1}/{len(keep_segments)}: {start:.2f}s - {end:.2f}s")
-            subprocess.run(cmd, check=True, capture_output=True)
-            temp_ts_files.append(temp_ts)
+            run_ffmpeg(cmd, description=f"提取片段 {i + 1}/{len(keep_segments)}: {start:.2f}s - {end:.2f}s")
+            temp_seg_files.append(temp_seg)
 
-            # 输出每个片段的实际时长（ffmpeg copy 后）
-            actual_duration = get_video_duration(temp_ts)
+            # 输出实际片段边界（仅用于诊断，失败不影响流程）
+            actual_duration = get_video_duration(temp_seg)
             if actual_duration is not None:
                 actual_end = start + actual_duration
                 print(
                     f"  实际片段边界 {i + 1}: "
                     f"{format_time_ms(start)}-{format_time_ms(actual_end)}"
                 )
+            else:
+                print(f"  片段 {i + 1} 时长读取失败（不影响合并流程）")
 
-        # 使用 concat demuxer 拼接所有 TS 文件（确保时间戳正确累加）
-        print(f"\n开始合并视频片段 (TS流无损拼接)...")
+        # 使用 concat demuxer 拼接片段
+        print(f"\n开始合并视频片段 ({mode_label} concat)...")
         with open(concat_list_file, "w", encoding="utf-8") as f:
-            for ts_file in temp_ts_files:
-                f.write(f"file '{os.path.abspath(ts_file)}'\n")
+            for seg_file in temp_seg_files:
+                f.write(f"file '{os.path.abspath(seg_file)}'\n")
+
         cmd_concat = [
-            "ffmpeg",
-            "-y",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            concat_list_file,
-            "-c",
-            "copy",
-            "-f",
-            "mpegts",
-            temp_concat_ts,
-        ]
-
-        subprocess.run(cmd_concat, check=True, capture_output=True)
-
-        # 将合并后的 TS 转回 MP4（remux，不重编码）
-        print(f"正在转换为 MP4...")
-        cmd_mp4 = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            temp_concat_ts,
-            "-c",
-            "copy",
-            "-movflags",
-            "+faststart",
+            "ffmpeg", "-y",
+            "-f", "concat", "-safe", "0",
+            "-i", concat_list_file,
+            "-c", "copy",
+            "-movflags", "+faststart",
             output_file,
         ]
 
-        subprocess.run(cmd_mp4, check=True, capture_output=True)
+        run_ffmpeg(cmd_concat, description="合并片段")
 
-        # 输出合并后实际保留片段边界 CSV（基于每段实际时长累计）
+        # 输出实际保留/删除片段边界 CSV
         actual_keep_segments = []
         for i, (start, _end) in enumerate(keep_segments):
-            if i < len(temp_ts_files):
-                seg_duration = get_video_duration(temp_ts_files[i])
+            if i < len(temp_seg_files):
+                seg_duration = get_video_duration(temp_seg_files[i])
                 if seg_duration is None:
                     seg_duration = 0.0
             else:
@@ -480,7 +470,6 @@ def remove_video_segments(
 
         print(f"保留片段边界CSV(实际): {segments_to_csv(actual_keep_segments)}")
 
-        # 基于“实际保留片段边界”反推“实际删除片段边界”
         actual_removed_segments = []
         current = 0.0
         for ks, ke in actual_keep_segments:
@@ -496,17 +485,12 @@ def remove_video_segments(
         print(f"删除片段边界CSV(实际): {actual_removed_csv}")
         run_srt_sync_with_actual_removed_csv(actual_removed_csv)
 
-        # 如果需要替换原文件
         if replace_original:
             final_output = os.path.join(input_dir, f"{base_name}_processed.mp4")
-            # 不删除原文件，直接重命名输出文件
-            # if os.path.exists(input_file):
-            #     os.remove(input_file)
             try:
                 os.replace(output_file, final_output)
             except PermissionError:
                 import time
-
                 time.sleep(0.5)
                 os.replace(output_file, final_output)
             print(f"\n视频处理成功! 输出文件: {final_output}")
@@ -515,22 +499,18 @@ def remove_video_segments(
             print(f"\n视频处理成功! 输出文件: {output_file}")
         return True
 
-    except subprocess.CalledProcessError as e:
-        print(f"视频处理失败: {e}")
+    except subprocess.CalledProcessError:
         return False
     except FileNotFoundError:
         print("错误: 未找到 ffmpeg，请确保已安装 ffmpeg 并添加到系统 PATH")
         return False
     finally:
         # 清理临时文件
-        for temp_file in temp_ts_files:
+        for temp_file in temp_seg_files:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
-        if os.path.exists(temp_concat_ts):
-            os.remove(temp_concat_ts)
         if os.path.exists(concat_list_file):
             os.remove(concat_list_file)
-        # 清理临时目录
         try:
             if os.path.exists(temp_dir) and not os.listdir(temp_dir):
                 os.rmdir(temp_dir)

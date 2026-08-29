@@ -53,7 +53,7 @@ def get_video_duration(video_file: str) -> Optional[float]:
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
         return float(result.stdout.strip())
     except Exception as e:
         print(f"获取视频时长失败: {e}")
@@ -91,7 +91,7 @@ def get_video_info(video_file: str) -> Tuple[Optional[float], str]:
 
     try:
         result = subprocess.run(
-            duration_cmd, capture_output=True, text=True, check=True
+            duration_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True
         )
         duration = float(result.stdout.strip())
     except Exception as e:
@@ -99,7 +99,7 @@ def get_video_info(video_file: str) -> Tuple[Optional[float], str]:
         duration = None
 
     try:
-        result = subprocess.run(codec_cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(codec_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
         codec = result.stdout.strip()
     except Exception:
         codec = "unknown"
@@ -128,7 +128,7 @@ def get_keyframes(video_file: str) -> List[float]:
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
     except Exception as e:
         print(f"获取关键帧失败: {e}")
         return []
@@ -260,7 +260,7 @@ def split_video(
     if duration is None:
         return False
 
-    # 解析分割点
+    # 解析分割点（先仅检查格式和正数，暂不检查时长）
     requested_points: List[float] = []
     for sp_str in split_point_strs:
         try:
@@ -271,12 +271,19 @@ def split_video(
         if t <= 0:
             print(f"错误: 分割时间必须大于 0，got {sp_str}")
             return False
-        if t >= duration:
-            print(f"错误: 分割时间 {t}s 超过或等于视频总时长 {duration}s")
-            return False
         requested_points.append(t)
 
+    # 先对分割时间从小到大排序去重
     requested_points = sorted(set(requested_points))
+
+    # 再统一检查是否超过视频时长
+    if requested_points and requested_points[-1] >= duration:
+        print(
+            f"错误: 最大分割时间 {format_time(requested_points[-1])} "
+            f"({requested_points[-1]:.3f}s) 超过或等于视频总时长 "
+            f"{format_time(duration)} ({duration:.3f}s)"
+        )
+        return False
     split_times = requested_points[:]
     mapping: List[Tuple[float, float, float]] = []
 
