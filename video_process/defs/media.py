@@ -32,7 +32,7 @@ AUDIO = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空时按下方策略自动推断",
@@ -84,7 +84,7 @@ FRAME = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到输入同目录",

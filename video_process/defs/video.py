@@ -196,7 +196,7 @@ BATCH_TRIM = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到 {输入目录}/cut",
@@ -254,7 +254,7 @@ REMOVE_SEGMENTS = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到输入同目录",
@@ -300,7 +300,7 @@ EXTRACT_SEGMENTS = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到输入同目录",
@@ -375,7 +375,7 @@ SPLIT = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到输入同目录",
@@ -413,7 +413,7 @@ COMPRESS = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到输入文件所在目录",
@@ -458,7 +458,7 @@ CONVERT = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到输入同目录",

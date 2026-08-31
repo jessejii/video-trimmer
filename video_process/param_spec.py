@@ -19,7 +19,9 @@ class ParamSpec:
 
     name: str                                  # 参数名（字段名）
     label: str                                 # UI 显示标签
-    kind: str                                  # dir|file|path|text|int|float|choice|bool
+    # dir|file|path|outdir|text|int|float|choice|bool
+    # outdir = 输出文件夹：可选目录，允许尚不存在（由工具自动创建）
+    kind: str
     default: Any = None
     choices: Optional[List[Tuple[str, Any]]] = None   # (显示文本, 实际值)
     help: str = ""

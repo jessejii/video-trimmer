@@ -48,7 +48,7 @@ SRT2ASS = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到输入同目录",
@@ -185,7 +185,7 @@ JIANYING = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到草稿文件同目录",
@@ -233,7 +233,7 @@ BCUT = ToolDefinition(
         ParamSpec(
             name="output_dir",
             label="输出文件夹（可选）",
-            kind="text",
+            kind="outdir",
             default="",
             required=False,
             help="留空=输出到草稿文件同目录",

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional
 
 from PyQt6.QtCore import Qt
@@ -48,6 +49,7 @@ class _ParamRow(QWidget):
         if spec.kind == "bool":
             self.editor = QCheckBox(spec.label, self)
             self.editor.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.editor.setChecked(bool(spec.default))
             layout.addWidget(self.editor)
             self.label = None
         else:
@@ -76,7 +78,7 @@ class _ParamRow(QWidget):
                 file_patterns=spec.file_patterns,
                 allow_both=True,
             )
-        if spec.kind == "dir":
+        if spec.kind in ("dir", "outdir"):
             return PathInput(
                 placeholder="拖入文件夹，或点击右侧浏览…",
                 value=str(spec.default or ""),
@@ -304,6 +306,10 @@ class ToolPanel(QWidget):
                 if not ok:
                     errors.append(f"{spec.label}：{err}")
                     continue
+            elif spec.kind == "outdir" and value and os.path.isfile(str(value)):
+                # 输出文件夹允许不存在（工具会自动创建），但不能是已存在的文件
+                errors.append(f"{spec.label}：已存在同名文件，不能作为输出文件夹")
+                continue
 
             if spec.required and spec.kind != "bool" and value in (None, ""):
                 errors.append(f"{spec.label}：不能为空")
@@ -330,6 +336,8 @@ class ToolPanel(QWidget):
                     ),
                 )
                 row.set_invalid(not ok)
+            elif spec.kind == "outdir" and value:
+                row.set_invalid(os.path.isfile(str(value)))
             else:
                 row.set_invalid(False)
 
