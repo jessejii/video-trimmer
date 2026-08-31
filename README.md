@@ -2,9 +2,6 @@
 
 基于 [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) 的桌面图形界面（GUI）视频/字幕处理工具集。
 
-本项目将原先分散在 11 个 `.bat` 批处理文件中的交互式操作，全部迁移到统一的
-桌面界面中完成。
-
 **单一入口**：`python main.py`（启动 PyQt6 图形界面）
 
 ---
@@ -295,27 +292,3 @@ video_process/entry.py      统一初始化入口（utf-8 控制台 + ffmpeg PAT
 - 全局设置仍写在 `~/.video-process/config.json`，与源码模式共用一份。
 - 杀毒软件对 PyInstaller 产物的误报是行业通病，必要时加白名单或做代码签名。
 
----
-
-## 与旧项目的对应关系
-
-| 原 video-trimmer | 本项目 |
-|---|---|
-| `merge_videos.bat/.py` | `merge` |
-| `trim_edges.bat/.py` | `trim-edges` |
-| `batch_trim_edges*.bat/.py` | `batch-trim --mode fast\|amd` |
-| `remove_segments.bat/.py` | `remove-segments` |
-| `extract_segments.bat/.py` | `extract-segments` |
-| `split_video*.bat/.py` | `split --mode fast\|precise\|amd` |
-| `compress_video.bat/.py` | `compress` |
-| `convert_to_mp4.bat/.py` | `convert` |
-| `extract_audio.bat/.py` | `audio` |
-| `extract_frame.bat/.py` | `frame` |
-| `srt_to_ass.bat/.py` | `srt2ass` |
-| `remove_srt_segments.bat/.py` | `srt-remove` |
-| `rename_srt_to_txt.bat` | `srt-rename` |
-| `video_timeline_calculator.html` | `timeline` |
-| 无 | `jianying-subtitle`（剪映字幕导出） |
-| 无 | `bcut-subtitle`（必剪字幕导出） |
-
-原项目 `D:\work\python\video-trimmer` 保持原样未作改动，本项目为自包含重写。
