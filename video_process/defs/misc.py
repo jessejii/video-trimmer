@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""工具箱：时间线计算器与全局设置。"""
+"""工具箱：时间线计算器、文本繁简转换与全局设置。"""
 
 from __future__ import annotations
 
