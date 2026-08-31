@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video-process"
+version = "1.1.0"
+description = "基于 PyQt6 的视频/字幕处理工具集（桌面 GUI）"
+requires-python = ">=3.9"
+dependencies = [
+    "PyQt6>=6.5",
+]
+
+# 打包成可执行程序时才需要：pip install -e ".[build]"
+[project.optional-dependencies]
+build = ["pyinstaller>=6.0"]
+
+[project.gui-scripts]
+video-process = "video_process.entry:run"
+
+[tool.setuptools]
+packages = [
+    "video_process",
+    "video_process.core",
+    "video_process.tools",
+    "video_process.defs",
+    "video_process.ui",
+    "video_process.ui.panels",
+    "video_process.ui.widgets",
+    "video_process.ui.dialogs",
+]
