@@ -12,14 +12,22 @@ from ..host import PanelHost
 from .base import ToolPanel
 from .settings_panel import SettingsPanel
 from .timeline_panel import TimelinePanel
+from .zh_convert_panel import ZhConvertPanel
 
 #: 定制面板注册表：ToolDefinition.panel_class -> 面板类
 _CUSTOM_PANELS = {
     "timeline": TimelinePanel,
     "settings": SettingsPanel,
+    "zh-convert": ZhConvertPanel,
 }
 
-__all__ = ["ToolPanel", "TimelinePanel", "SettingsPanel", "create_panel"]
+__all__ = [
+    "ToolPanel",
+    "TimelinePanel",
+    "SettingsPanel",
+    "ZhConvertPanel",
+    "create_panel",
+]
 
 
 def create_panel(

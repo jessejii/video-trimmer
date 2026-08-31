@@ -71,6 +71,15 @@ VERSION = VERSION_FILE if (
 
 DATAS = [(ICON_PATH, "assets")] if HAS_ICON else []
 
+# opencc 的 config/*.json 与 dictionary/*.txt 是运行时读取的数据文件，
+# PyInstaller 不会自动收集，缺了会在转换时抛 FileNotFoundError
+try:
+    from PyInstaller.utils.hooks import collect_data_files
+
+    DATAS += collect_data_files("opencc")
+except Exception:
+    pass
+
 # ---------------------------------------------------------------------------
 # ffmpeg
 # ---------------------------------------------------------------------------
@@ -118,6 +127,7 @@ HIDDEN_IMPORTS = [
     "PyQt6.QtCore",
     "PyQt6.QtGui",
     "PyQt6.QtWidgets",
+    "opencc",
 ]
 
 # 明确用不到的重量级模块。PyInstaller 默认也会排除一部分，这里只是再收紧

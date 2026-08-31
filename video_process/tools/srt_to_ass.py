@@ -15,6 +15,7 @@ from typing import List, Optional
 
 from ..core.models import TaskResult, ToolContext
 from ..core.paths import scan_subtitles, validate_path
+from ..core.textio import read_text
 
 ASS_HEADER = """[Script Info]
 Title: Converted from SRT
@@ -82,16 +83,6 @@ def parse_srt_time(time_str: str) -> str:
     return f"{int(hours)}:{minutes}:{seconds[:-1]}"
 
 
-def _read_text(path: str) -> str:
-    """读取字幕文件，utf-8-sig 优先，失败回退 gbk。"""
-    try:
-        with open(path, "r", encoding="utf-8-sig") as fh:
-            return fh.read()
-    except UnicodeDecodeError:
-        with open(path, "r", encoding="gbk") as fh:
-            return fh.read()
-
-
 def convert_srt_to_ass(
     srt_file: str,
     ass_file: Optional[str] = None,
@@ -99,8 +90,8 @@ def convert_srt_to_ass(
 ) -> tuple:
     """转换单个 SRT 文件。返回 (成功, 输出路径, 字幕条数, 错误信息)。"""
     try:
-        content = _read_text(srt_file)
-    except OSError as exc:
+        content = read_text(srt_file)
+    except (OSError, UnicodeDecodeError) as exc:
         return False, "", 0, f"读取失败: {exc}"
 
     out = ass_file or (os.path.splitext(srt_file)[0] + ".ass")

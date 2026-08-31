@@ -132,6 +132,7 @@ def scan_subtitles(directory: str, recursive: bool = True) -> List[str]:
     )
 
 
+
 def safe_filename(text: str, fallback: str = "und") -> str:
     """清理字符串中的非法文件名字符。"""
     cleaned = _ILLEGAL_CHARS.sub("", text).strip()

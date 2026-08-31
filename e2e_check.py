@@ -251,6 +251,27 @@ def main():
         check("timeline 移除广告行", "[广告]" not in r.outputs[0])
         check("timeline 前移 2 分钟", "01:33:00 继续" in r.outputs[0])
 
+    # ---------- 15. zh_convert ----------
+    print("\n[15] 文本繁简转换（OpenCC）")
+    try:
+        import opencc  # noqa: F401
+    except ImportError:
+        check("zh_convert 跳过（未安装 opencc）", True,
+              "(pip install opencc-python-reimplemented)")
+    else:
+        from video_process.tools.zh_convert import convert_text
+        src = "我们使用鼠标和软件，里面有个窗口"
+        r = convert_text(src, "s2twp", ctx=mkctx())
+        check("zh_convert 成功", r.success, r.message)
+        tw = r.outputs[0] if r.outputs else ""
+        check("zh_convert 转台湾正体", tw == "我們使用滑鼠和軟體，裡面有個視窗", tw)
+        check("zh_convert 转繁体标准",
+              convert_text(src, "s2t").outputs[0] == "我們使用鼠標和軟件，裏面有個窗口")
+        check("zh_convert 转回简体",
+              convert_text(tw, "tw2sp").outputs[0] == src)
+        check("zh_convert 空文本报错", not convert_text("  ").success)
+        check("zh_convert 无效配置报错", not convert_text(src, "bogus").success)
+
     # ---------- 汇总 ----------
     print("\n" + "=" * 60)
     print(f"通过 {len(PASS)} 项，失败 {len(FAIL)} 项")

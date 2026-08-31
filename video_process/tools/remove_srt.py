@@ -19,6 +19,7 @@ from typing import List, Optional, Tuple
 
 from ..core.models import TaskResult, ToolContext
 from ..core.paths import validate_path
+from ..core.textio import read_text
 
 # SRT 标准时间戳: 00:00:20,000 --> 00:00:22,000
 _TIME_PATTERN = re.compile(
@@ -242,11 +243,9 @@ def remove_srt_segments(
         return TaskResult(success=False, message=str(exc))
 
     try:
-        with open(resolved, "r", encoding="utf-8-sig") as fh:
-            content = fh.read()
-    except UnicodeDecodeError:
-        with open(resolved, "r", encoding="gbk") as fh:
-            content = fh.read()
+        content = read_text(resolved)
+    except (OSError, UnicodeDecodeError) as exc:
+        return TaskResult(success=False, message=f"读取失败: {exc}")
 
     cues = parse_srt(content)
     if not cues:

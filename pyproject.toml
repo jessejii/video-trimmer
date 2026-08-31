@@ -9,6 +9,7 @@ description = "基于 PyQt6 的视频/字幕处理工具集（桌面 GUI）"
 requires-python = ">=3.9"
 dependencies = [
     "PyQt6>=6.5",
+    "opencc-python-reimplemented>=0.1.6",
 ]
 
 # 打包成可执行程序时才需要：pip install -e ".[build]"

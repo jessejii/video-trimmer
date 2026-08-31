@@ -11,6 +11,11 @@ from ..param_spec import (
 )
 from ..settings_store import CONFIG_PATH
 from ..tools.timeline import calculate_timeline
+from ..tools.zh_convert import (
+    CONVERSION_CHOICES as ZH_CONVERSION_CHOICES,
+    DEFAULT_CONVERSION as ZH_DEFAULT_CONVERSION,
+    convert_text,
+)
 
 GROUP = "工具箱"
 
@@ -34,6 +39,39 @@ TIMELINE = ToolDefinition(
     ],
     runner=calculate_timeline,
     panel_class="timeline",
+    confirm_before_run=False,
+)
+
+ZH_CONVERT = ToolDefinition(
+    id="zh-convert",
+    title="文本繁简转换（OpenCC）",
+    group=GROUP,
+    description=(
+        "粘贴文本，用 OpenCC 转换简体与繁体，支持台湾正体。\n"
+        "  · 简体 → 台湾正体（含习惯用语）: 软件→軟體、鼠标→滑鼠\n"
+        "  · 其余方向见下方「转换方向」\n"
+        "执行后结果直接替换输入框内容（Ctrl+Z 可撤销）。"
+    ),
+    specs=[
+        ParamSpec(
+            name="text",
+            label="待转换文本",
+            kind="text",
+            default="",
+            help="粘贴任意文本，不限长度",
+            multiline=True,
+        ),
+        ParamSpec(
+            name="conversion",
+            label="转换方向",
+            kind="choice",
+            default=ZH_DEFAULT_CONVERSION,
+            choices=ZH_CONVERSION_CHOICES,
+            help="带「习惯用语」的会一并转换地区用词",
+        ),
+    ],
+    runner=convert_text,
+    panel_class="zh-convert",
     confirm_before_run=False,
 )
 
@@ -118,6 +156,6 @@ SETTINGS = ToolDefinition(
     confirm_before_run=False,
 )
 
-DEFS = [TIMELINE, SETTINGS]
+DEFS = [TIMELINE, ZH_CONVERT, SETTINGS]
 
-__all__ = ["GROUP", "DEFS", "TIMELINE", "SETTINGS"]
+__all__ = ["GROUP", "DEFS", "TIMELINE", "ZH_CONVERT", "SETTINGS"]

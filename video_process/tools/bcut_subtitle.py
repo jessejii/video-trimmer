@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..core.models import TaskResult, ToolContext
 from ..core.paths import safe_filename, validate_path
+from ..core.textio import read_text
 
 #: 必剪草稿文件扩展名
 DRAFT_EXT = ".bjson"
@@ -187,13 +188,8 @@ def convert_draft_to_subtitles(
 # 文件发现与输出命名
 # ---------------------------------------------------------------------------
 def load_draft(path: str) -> Dict[str, Any]:
-    """读取必剪草稿 JSON，utf-8-sig 优先，失败回退 gbk。"""
-    try:
-        with open(path, "r", encoding="utf-8-sig") as fh:
-            return json.load(fh)
-    except UnicodeDecodeError:
-        with open(path, "r", encoding="gbk") as fh:
-            return json.load(fh)
+    """读取必剪草稿 JSON（utf-8-sig 优先，失败回退 gbk）。"""
+    return json.loads(read_text(path))
 
 
 def _latest_bjson_in(directory: str) -> Optional[str]:

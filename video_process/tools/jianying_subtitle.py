@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from ..core.models import TaskResult, ToolContext
 from ..core.paths import safe_filename, validate_path
+from ..core.textio import read_text
 
 #: 剪映草稿文件名，按优先级排列
 DRAFT_FILE_NAMES = ("draft_info.json", "draft_content.json")
@@ -176,13 +177,8 @@ def convert_draft_to_subtitles(
 # 文件发现与输出命名
 # ---------------------------------------------------------------------------
 def load_draft(path: str) -> Dict[str, Any]:
-    """读取剪映草稿 JSON，utf-8-sig 优先，失败回退 gbk。"""
-    try:
-        with open(path, "r", encoding="utf-8-sig") as fh:
-            return json.load(fh)
-    except UnicodeDecodeError:
-        with open(path, "r", encoding="gbk") as fh:
-            return json.load(fh)
+    """读取剪映草稿 JSON（utf-8-sig 优先，失败回退 gbk）。"""
+    return json.loads(read_text(path))
 
 
 def _draft_file_in(directory: str) -> Optional[str]:
