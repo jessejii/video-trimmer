@@ -1,0 +1,62 @@
+name: build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: 检查 ffmpeg
+        shell: bash
+        run: |
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+
+      - name: 读取版本号
+        id: ver
+        shell: bash
+        run: |
+          v=$(python -c "import video_process; print(video_process.__version__)")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: 打包
+        run: python build.py --clean
+
+      - name: 冒烟检查
+        shell: bash
+        run: test -f "dist/video-process/视频处理工具集.exe"
+
+      - name: 压缩
+        shell: bash
+        run: |
+          cd dist
+          tar -a -cf "../video-process-${{ steps.ver.outputs.version }}-win64.zip" video-process
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-process-win64
+          path: video-process-*.zip
+
+      - name: 发布 Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: video-process-*.zip

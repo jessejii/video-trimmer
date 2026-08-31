@@ -237,7 +237,7 @@ python build.py              # 等价命令
 python build.py --onefile    # 单文件模式
 python build.py --clean      # 先清掉上次的构建产物
 python build.py --no-ffmpeg  # 不内置 ffmpeg（改用运行机上的）
-python build.py --ffmpeg-dir D:\sdk\ffmpeg\bin   # 指定用哪份 ffmpeg
+python build.py --ffmpeg-dir C:\sdk\ffmpeg\bin   # 指定用哪份 ffmpeg
 ```
 
 首次执行会自动 `pip install pyinstaller`；也可以提前装好：
