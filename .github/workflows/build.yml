@@ -24,7 +24,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      # Windows 镜像（2022 / 2025）都不预装 ffmpeg，用不到就打不出内置 ffmpeg 的产物
       - name: 安装 ffmpeg
         uses: AnimMouse/setup-ffmpeg@v1
 
