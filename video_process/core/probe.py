@@ -25,8 +25,8 @@ _AMF_CACHE: Optional[List[str]] = None
 
 def clear_cache() -> None:
     """清空探测缓存。"""
-    _CACHE.clear()
     global _AMF_CACHE
+    _CACHE.clear()
     _AMF_CACHE = None
 
 

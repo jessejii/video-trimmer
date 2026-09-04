@@ -570,6 +570,25 @@ class VideoProcessWindow(QMainWindow):
         except Exception as exc:
             self.notify(f"填入失败: {exc}", "error", timeout=5)
 
+    def reload_panels(self, keep: object = None) -> None:
+        """全局设置变更后重建面板。
+
+        参数默认值在面板创建时从设置快照，且面板是按需创建后缓存的，
+        不重建的话用户改完设置切回去看到的还是旧默认值。
+        """
+        row = self._nav_list.currentRow()
+        current = self._nav_items[row] if 0 <= row < len(self._nav_items) else None
+
+        for tool_id, panel in list(self._panels.items()):
+            if panel is keep:
+                continue
+            self._stack.removeWidget(panel)
+            panel.deleteLater()
+            del self._panels[tool_id]
+
+        if current and current not in self._panels:
+            self.switch_to(current)
+
     # ==================================================================
     # 关闭保护
     # ==================================================================
@@ -578,7 +597,7 @@ class VideoProcessWindow(QMainWindow):
             answer = QMessageBox.question(
                 self,
                 "任务正在运行",
-                "当前任务尚未结束，关闭窗口会中断它。确定要退出吗？",
+                "当前任务尚未结尾，关闭窗口会中断它。确定要退出吗？",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )

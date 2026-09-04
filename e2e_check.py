@@ -84,6 +84,21 @@ def main():
         d = duration_of(out)
         check("merge 时长 ≈ 20s", 18.5 < d < 21.5, f"(实际 {d:.2f}s)")
 
+    # 有 AMF 时补测模式3（concat + AMF 重编码），这条分支只能靠真机覆盖。
+    # 用独立目录：merge 会扫描输入目录下的全部视频，混进上一次产物会算错时长
+    if check_amf_support():
+        amd_dir = os.path.join(WORK, "merge-amd")
+        os.makedirs(amd_dir)
+        for name in ("a.mp4", "b.mp4"):
+            subprocess.run(["ffmpeg", "-y", "-i", src1, "-c", "copy",
+                            os.path.join(amd_dir, name)], capture_output=True)
+        cout = os.path.join(amd_dir, "gpu_merge.mp4")
+        r = merge_videos(amd_dir, mode=3, output_file=cout, ctx=mkctx())
+        check("merge 模式3(AMF) 成功", r.success, r.message)
+        if os.path.exists(cout):
+            d = duration_of(cout)
+            check("merge 模式3 时长 ≈ 24s", 22 < d < 26, f"(实际 {d:.2f}s)")
+
     # ---------- 2. trim_edges ----------
     print("\n[2] 开头结尾裁剪（时间点语义，保留 2s-8s）")
     from video_process.tools.trim_edges import trim_edges
@@ -185,6 +200,19 @@ def main():
     r = convert_to_mp4(mkv, mode=1, ctx=mkctx())
     check("convert 成功", r.success, r.message)
     check("convert 输出 .mp4", os.path.exists(os.path.join(vd, "v.mp4")))
+
+    if check_amf_support():
+        amd = os.path.join(WORK, "convert-amd")
+        os.makedirs(amd)
+        subprocess.run(["ffmpeg", "-y", "-i", src1, "-c", "copy",
+                        os.path.join(amd, "v.mkv")], capture_output=True)
+        r = convert_to_mp4(os.path.join(amd, "v.mkv"), mode=3, ctx=mkctx())
+        check("convert 模式3(AMF) 成功", r.success, r.message)
+        amd_out = [p for p in r.outputs if os.path.exists(p)]
+        check("convert 模式3 输出存在", bool(amd_out), str(r.outputs))
+        if amd_out:
+            d = duration_of(amd_out[0])
+            check("convert 模式3 时长 ≈ 12s", 10.5 < d < 13.5, f"(实际 {d:.2f}s)")
 
     # ---------- 9. extract_audio ----------
     print("\n[9] 音轨提取")

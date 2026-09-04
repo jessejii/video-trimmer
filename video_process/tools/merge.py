@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 from typing import List, Optional
 
+from ..core.amf import build_encode_args, require_amf
 from ..core.ffmpeg import FFmpegRunner, build_progress_args
 from ..core.models import TaskResult, ToolContext, ToolError
 from ..core.paths import (
@@ -55,14 +56,14 @@ def _convert_one(
     index: int,
     total: int,
 ) -> None:
-    """用 libx264 或 h264_amf 把单个视频转成标准 MP4。"""
+    """用 libx264 或 AMF 把单个视频转成标准 MP4。"""
     name = os.path.basename(input_path)
     duration = get_duration(input_path)
     if encoder == "gpu":
-        v_args = [
-            "-c:v", "h264_amf", "-quality", "balanced",
-            "-rc", "cqp", "-qp", "23",
-        ]
+        # 走统一的 AMF 参数构造，可按源编码选 hevc_amf / av1_amf 并回退 h264_amf
+        v_args = build_encode_args(
+            runner.ctx, input_path, quality="balanced", cqp=True, qp=23
+        )
     else:
         v_args = ["-c:v", "libx264", "-crf", "23", "-preset", "medium"]
 
@@ -267,10 +268,10 @@ def _merge_direct_gpu(
     out: str,
 ) -> None:
     """模式3：concat demuxer + AMF 一次性重编码。"""
-    from ..core.amf import require_amf
-
     ctx = runner.ctx
     require_amf(ctx)
+    # 探测首个源文件的编码来选 AMF 编码器：concat 列表本身无法探测
+    enc_args = build_encode_args(ctx, files[0], quality="balanced", cqp=True, qp=23)
 
     temp_dir = temp_dir_for(directory, "temp")
     list_file = os.path.join(temp_dir, "filelist.txt")
@@ -279,7 +280,7 @@ def _merge_direct_gpu(
         ctx.log("开始直接使用 GPU 合并视频（重编码整个流，可修复音画不同步）...")
         runner.run(
             ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_file,
-             "-c:v", "h264_amf", "-quality", "balanced", "-rc", "cqp", "-qp", "23",
+             *enc_args,
              "-c:a", "aac", "-b:a", "128k", out],
             description="  GPU 合并中...",
         )

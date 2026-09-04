@@ -48,3 +48,11 @@ class PanelHost(Protocol):
     def cancel_task(self) -> None: ...
 
     def fill_remove_segments(self, csv: str) -> None: ...
+
+    def reload_panels(self, keep: object = None) -> None:
+        """全局设置变更后重建面板（参数默认值在面板创建时快照）。
+
+        keep: 不重建的面板，通常是发起保存的设置面板自身 ——
+        否则刚点完「开始执行」的控件会被销毁。
+        """
+        ...

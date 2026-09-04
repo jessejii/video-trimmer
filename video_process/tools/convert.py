@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 from typing import List, Optional
 
-from ..core.amf import require_amf
+from ..core.amf import build_encode_args, require_amf
 from ..core.ffmpeg import FFmpegRunner, build_progress_args
 from ..core.models import TaskResult, ToolContext, ToolError
 from ..core.paths import ensure_dir, human_size, remove_files, scan_videos, validate_path
@@ -54,10 +54,11 @@ def _convert_one(
                   "-c:a", "aac", "-b:a", "128k"]
         label = "CPU 编码 (libx264)"
     elif mode == 3:
-        v_args = ["-c:v", "h264_amf", "-quality", "balanced",
-                  "-rc", "cqp", "-qp", "23",
-                  "-c:a", "aac", "-b:a", "128k"]
-        label = "AMD 显卡加速 (h264_amf)"
+        # 走统一的 AMF 参数构造，可按源编码选 hevc_amf / av1_amf 并回退 h264_amf
+        v_args = build_encode_args(ctx, input_file, quality="balanced",
+                                   cqp=True, qp=23)
+        v_args += ["-c:a", "aac", "-b:a", "128k"]
+        label = f"AMD 显卡加速 ({v_args[1]})"
     else:
         v_args = ["-c", "copy"]
         label = "极速模式（仅换容器）"

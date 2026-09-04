@@ -37,7 +37,8 @@ GROUP = "视频处理"
 VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv",
               ".m4v", ".webm", ".ts"]
 
-#: AMD 专属参数（质量 / 用途 / 码率 / CQP），多个工具共用
+#: AMD 专属参数（质量 / 用途 / 码率 / CQP），多个工具共用。
+#: 每项都挂 setting，默认值由「全局设置」提供，用户仍可在面板上临时改。
 def amd_specs(trigger_value: str = "amd") -> List[ParamSpec]:
     return [
         ParamSpec(
@@ -48,6 +49,7 @@ def amd_specs(trigger_value: str = "amd") -> List[ParamSpec]:
             choices=QUALITY_CHOICES,
             required=False,
             visible_when=("mode", trigger_value),
+            setting="amf_quality",
         ),
         ParamSpec(
             name="usage",
@@ -57,6 +59,7 @@ def amd_specs(trigger_value: str = "amd") -> List[ParamSpec]:
             choices=USAGE_CHOICES,
             required=False,
             visible_when=("mode", trigger_value),
+            setting="amf_usage",
         ),
         ParamSpec(
             name="bitrate",
@@ -66,6 +69,7 @@ def amd_specs(trigger_value: str = "amd") -> List[ParamSpec]:
             required=False,
             visible_when=("mode", trigger_value),
             help="留空=自动匹配原视频码率 × 0.9",
+            setting="amf_bitrate",
         ),
         ParamSpec(
             name="cqp",
@@ -74,6 +78,7 @@ def amd_specs(trigger_value: str = "amd") -> List[ParamSpec]:
             default=False,
             required=False,
             visible_when=("mode", trigger_value),
+            setting="amf_cqp",
         ),
         ParamSpec(
             name="qp",
@@ -83,6 +88,7 @@ def amd_specs(trigger_value: str = "amd") -> List[ParamSpec]:
             required=False,
             visible_when=("cqp", True),
             help="越小质量越好",
+            setting="amf_qp",
         ),
     ]
 
@@ -121,7 +127,7 @@ TRIM_EDGES = ToolDefinition(
     description=(
         "按绝对时间点裁剪：保留 [开头时间, 结尾时间) 之间的内容。\n"
         "  · 开头时间：该时间点之前的内容被删除\n"
-        "  · 结尾时间：该时间点之后的内容被删除（留空或填 结尾 =到视频结束）\n"
+        "  · 结尾时间：该时间点之后的内容被删除（留空或填 结尾 =到视频结尾）\n"
         "TS 中间流无损裁剪，不重编码。输出: {原名}_trim_edges.mp4"
     ),
     specs=[
@@ -221,6 +227,7 @@ BATCH_TRIM = ToolDefinition(
             required=False,
             visible_when=("mode", "amd"),
             help="仅 AMD 模式生效",
+            setting="amf_quality",
         ),
     ],
     runner=batch_trim,
@@ -249,7 +256,7 @@ REMOVE_SEGMENTS = ToolDefinition(
             kind="text",
             default="",
             validator=validate_segments,
-            help="格式 开始-结束,开始-结束；时间支持 90 / 1:30 / 1:30:45 / 结尾",
+            help="格式 开始-结尾,开始-结尾；时间支持 90 / 1:30 / 1:30:45 / 结尾",
         ),
         ParamSpec(
             name="output_dir",
@@ -267,6 +274,7 @@ REMOVE_SEGMENTS = ToolDefinition(
             required=False,
             help="按实际切割边界同步字幕时间（copy 裁剪会对齐关键帧，"
                  "实际边界与请求边界有偏差，必须以实际边界同步）",
+            setting="auto_sync_srt",
         ),
     ],
     runner=remove_segments,
@@ -279,7 +287,7 @@ EXTRACT_SEGMENTS = ToolDefinition(
     description=(
         "提取视频中的多个时间段，每个段输出为独立文件。\n"
         "示例: 1:00-2:00,5:00-结尾\n"
-        "输出命名: {原名}_{序号}_{开始}-{结束}.mp4"
+        "输出命名: {原名}_{序号}_{开始}-{结尾}.mp4"
     ),
     specs=[
         ParamSpec(
@@ -295,7 +303,7 @@ EXTRACT_SEGMENTS = ToolDefinition(
             kind="text",
             default="",
             validator=validate_segments,
-            help="格式 开始-结束,开始-结束；支持 结尾 表示到视频末尾",
+            help="格式 开始-结尾,开始-结尾；支持 结尾 表示到视频末尾",
         ),
         ParamSpec(
             name="output_dir",
@@ -424,6 +432,7 @@ COMPRESS = ToolDefinition(
             kind="bool",
             default=True,
             required=False,
+            setting="recursive_scan",
         ),
     ],
     runner=compress_video,

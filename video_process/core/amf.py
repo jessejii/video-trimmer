@@ -89,8 +89,14 @@ def usage_value(usage: str) -> int:
     return USAGE_MAP.get(str(usage).lower(), 0)
 
 
+#: 编码器列表只需向用户报告一次；批量处理上百个文件时不必每行重复
+_AMF_REPORTED = False
+
+
 def require_amf(ctx: ToolContext) -> List[str]:
     """检测 AMF 可用性，不可用则抛出带明确指引的异常。"""
+    global _AMF_REPORTED
+
     encoders = check_amf_support()
     if not encoders:
         ctx.error("未检测到 AMD AMF 编码器！")
@@ -98,7 +104,9 @@ def require_amf(ctx: ToolContext) -> List[str]:
         ctx.error("        2) 使用的 ffmpeg 编译时启用了 AMF 支持")
         ctx.error("        3) 可用 `ffmpeg -encoders | findstr amf` 确认")
         raise RuntimeError("未检测到 AMD AMF 编码器")
-    ctx.log(f"检测到 AMF 编码器: {', '.join(encoders)}")
+    if not _AMF_REPORTED:
+        _AMF_REPORTED = True
+        ctx.log(f"检测到 AMF 编码器: {', '.join(encoders)}")
     return encoders
 
 

@@ -23,6 +23,7 @@ from ..core.models import (
     ToolContext,
     ToolError,
 )
+from ..core.probe import clear_cache
 from ..param_spec import ToolDefinition
 
 
@@ -65,6 +66,10 @@ class ToolTask(QObject):
         except Exception as exc:  # noqa: BLE001 - 兜底，避免线程静默崩溃
             self.logRequested.emit(traceback.format_exc(), LogLevel.ERROR)
             result = TaskResult(success=False, message=f"执行异常: {exc}")
+        finally:
+            # 探测缓存（时长/码率/关键帧）无上限，且源文件可能已被本任务改掉，
+            # 任务结束即清空，避免跨任务读到脏数据
+            clear_cache()
         self.finished.emit(result)
 
     def _invoke(self, ctx: ToolContext) -> TaskResult:

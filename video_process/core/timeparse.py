@@ -136,6 +136,20 @@ def format_mmss(seconds: float) -> str:
     return f"{m:02d}:{s:02d}"
 
 
+def format_srt_time(ms: Optional[float]) -> str:
+    """毫秒 -> SRT 时间戳 HH:MM:SS,mmm（SRT 规范用逗号而非点分隔毫秒）。"""
+    try:
+        total = int(float(ms))
+    except (TypeError, ValueError):
+        total = 0
+    if total < 0:
+        total = 0
+    hour, rest = divmod(total, 3_600_000)
+    minute, rest = divmod(rest, 60_000)
+    second, millisecond = divmod(rest, 1000)
+    return f"{hour:02d}:{minute:02d}:{second:02d},{millisecond:03d}"
+
+
 def parse_segments(
     spec: str,
     duration: Optional[float] = None,
@@ -175,7 +189,7 @@ def parse_segments(
             warnings.append(f"跳过无法解析的时间段 {part}: {exc}")
             continue
         if start >= end:
-            warnings.append(f"跳过无效的时间段（开始时间 >= 结束时间）: {part}")
+            warnings.append(f"跳过无效的时间段（开始时间 >= 结尾时间）: {part}")
             continue
         segments.append((start, end))
 
@@ -190,7 +204,7 @@ def segments_to_csv(
 ) -> str:
     """时间段列表 -> HH:MM:SS.mmm-HH:MM:SS.mmm,HH:MM:SS.mmm-...
 
-    use_end_label=True 时，处于视频末尾的**结束时间**显示为"结尾"（开始时间始终为数值）。
+    use_end_label=True 时，处于视频末尾的**结尾时间**显示为"结尾"（开始时间始终为数值）。
     传给字幕同步等下游时必须用默认的数值格式。
     """
     return ",".join(

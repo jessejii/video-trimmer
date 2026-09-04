@@ -12,52 +12,24 @@
 
 from __future__ import annotations
 
-import json
 import os
-import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..core.models import TaskResult, ToolContext
-from ..core.paths import safe_filename, validate_path
-from ..core.textio import read_text
+from ..core.paths import validate_path
+from ..core.timeparse import format_srt_time
+from ._draft_export import FORMAT_CHOICES, NEWLINE, export_drafts, load_draft
 
 #: 必剪草稿文件扩展名
 DRAFT_EXT = ".bjson"
 
-#: 导出格式下拉项
-FORMAT_CHOICES = [
-    ("SRT 字幕（含时间轴）", "srt"),
-    ("纯文本 TXT（仅台词）", "txt"),
-    ("两种都导出", "both"),
-]
-
-#: SRT 规范要求 CRLF 换行
-NEWLINE = "\r\n"
-
 #: 旧版轨道类型
 _SUBTITLE_TRACK_TYPES = ("subtitle", "text", "caption")
-
-#: 形如 UUID / 哈希的自动命名（这类文件名不适合做导出主名）
-_AUTO_NAME = re.compile(r"^[0-9a-fA-F][0-9a-fA-F\-_]{15,}$")
 
 
 # ---------------------------------------------------------------------------
 # 核心转换
 # ---------------------------------------------------------------------------
-def ms_to_srt_time(ms: Any) -> str:
-    """毫秒 -> SRT 时间文本 HH:MM:SS,mmm。"""
-    try:
-        total = int(float(ms))
-    except (TypeError, ValueError):
-        total = 0
-    if total < 0:
-        total = 0
-    hour, rest = divmod(total, 3600000)
-    minute, rest = divmod(rest, 60000)
-    second, millisecond = divmod(rest, 1000)
-    return f"{hour:02d}:{minute:02d}:{second:02d},{millisecond:03d}"
-
-
 def _caption_text(caption: Dict[str, Any]) -> str:
     """取出一条字幕的文本，兼容新旧字段。"""
     for key in ("captionText", "text"):
@@ -146,8 +118,8 @@ def convert_track_to_subtitles(
             index += 1
             pieces.append(
                 f"{index}{newline}"
-                f"{ms_to_srt_time(item.start)} --> "
-                f"{ms_to_srt_time(item.end)}{newline}"
+                f"{format_srt_time(item.start)} --> "
+                f"{format_srt_time(item.end)}{newline}"
                 f"{item.text}{newline}{newline}"
             )
         else:
@@ -187,11 +159,6 @@ def convert_draft_to_subtitles(
 # ---------------------------------------------------------------------------
 # 文件发现与输出命名
 # ---------------------------------------------------------------------------
-def load_draft(path: str) -> Dict[str, Any]:
-    """读取必剪草稿 JSON（utf-8-sig 优先，失败回退 gbk）。"""
-    return json.loads(read_text(path))
-
-
 def _latest_bjson_in(directory: str) -> Optional[str]:
     """取目录中修改时间最新的 .bjson（与原实现的 find_latest_bjson 一致）。"""
     try:
@@ -239,35 +206,6 @@ def collect_draft_files(root: str, recursive: bool = True) -> List[str]:
     return sorted(found)
 
 
-def draft_stem(draft_path: str) -> str:
-    """导出文件主名：自动生成的 bjson 名改用草稿目录名。"""
-    stem = os.path.splitext(os.path.basename(draft_path))[0]
-    if (
-        not stem
-        or stem.lower() in ("draft", "draft_info", "draft_content")
-        or _AUTO_NAME.match(stem)
-    ):
-        parent = os.path.basename(os.path.dirname(os.path.abspath(draft_path)))
-        stem = parent or stem
-    return safe_filename(stem, fallback="draft")
-
-
-def _unique_path(path: str, overwrite: bool) -> str:
-    if overwrite or not os.path.exists(path):
-        return path
-    stem, ext = os.path.splitext(path)
-    n = 2
-    while os.path.exists(f"{stem}_{n}{ext}"):
-        n += 1
-    return f"{stem}_{n}{ext}"
-
-
-def _target_path(draft_path: str, filename: str, output_dir: str) -> str:
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        return os.path.join(output_dir, filename)
-    return os.path.join(os.path.dirname(draft_path) or ".", filename)
-
 
 # ---------------------------------------------------------------------------
 # 对外入口
@@ -304,61 +242,12 @@ def export_bcut_subtitles(
         )
 
     targets = [f for f in ("srt", "txt") if export_format in (f, "both")]
-    overwrite = bool(ctx.settings.overwrite)
 
-    outputs: List[str] = []
-    warnings: List[str] = []
-    success = 0
-    failed = 0
-    total = len(drafts)
-
-    ctx.log(f"找到 {total} 个草稿文件")
-
-    for i, draft_path in enumerate(drafts, 1):
-        ctx.check_cancel()
-        folder = os.path.basename(os.path.dirname(draft_path))
-        ctx.log(f"[{i}/{total}] {folder}")
-        ctx.progress(percent=i / total * 100, file=folder)
-
-        try:
-            draft = load_draft(draft_path)
-        except (OSError, ValueError) as exc:
-            ctx.error(f"  解析失败: {exc}")
-            failed += 1
-            continue
-
-        produced = 0
-        for fmt in targets:
-            tracks = convert_draft_to_subtitles(draft, fmt=fmt)
-            if not tracks:
-                warnings.append(f"{folder}：没有可导出的字幕轨道（{fmt.upper()}）")
-                continue
-
-            stem = draft_stem(draft_path)
-            multi = len(tracks) > 1
-            for n, (_track_name, body) in enumerate(tracks.items(), 1):
-                filename = f"{stem}_track{n}.{fmt}" if multi else f"{stem}.{fmt}"
-                out_path = _unique_path(
-                    _target_path(draft_path, filename, output_dir), overwrite
-                )
-                try:
-                    with open(out_path, "w", encoding="utf-8", newline="") as fh:
-                        fh.write(body)
-                except OSError as exc:
-                    ctx.error(f"  写入失败: {exc}")
-                    continue
-                outputs.append(out_path)
-                produced += 1
-                ctx.success(f"  -> {os.path.basename(out_path)}")
-
-        if produced:
-            success += 1
-        else:
-            failed += 1
-
-    return TaskResult(
-        success=failed == 0 and success > 0,
-        message=f"完成，成功 {success} 个草稿，失败 {failed} 个，共导出 {len(outputs)} 个文件",
-        outputs=outputs,
-        warnings=warnings,
+    return export_drafts(
+        ctx,
+        drafts,
+        targets,
+        convert=lambda draft, fmt: convert_draft_to_subtitles(draft, fmt=fmt),
+        output_dir=output_dir,
+        empty_hint="字幕轨道",
     )

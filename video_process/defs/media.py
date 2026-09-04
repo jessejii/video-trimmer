@@ -44,6 +44,7 @@ AUDIO = ToolDefinition(
             default=True,
             required=False,
             help="原项目的隐含约定：找不到 video 目录时才回退到输入目录",
+            setting="find_video_root",
         ),
         ParamSpec(
             name="recursive",
@@ -51,6 +52,7 @@ AUDIO = ToolDefinition(
             kind="bool",
             default=True,
             required=False,
+            setting="recursive_scan",
         ),
     ],
     runner=extract_audio,

@@ -24,6 +24,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from dataclasses import replace
+
 from ...core.models import LogLevel, TaskResult
 from ...core.paths import validate_path
 from ...param_spec import ParamSpec, ToolDefinition
@@ -170,14 +172,33 @@ class ToolPanel(QWidget):
         super().__init__(parent)
         self.definition = definition
         self.host = host
+        # 每面板一份 spec 副本：默认值要按当前全局设置覆盖，
+        # 而 definition.specs 是模块级共享实例，不能直接改。
+        self.specs = [self._apply_setting(s) for s in definition.specs]
         self._rows: Dict[str, _ParamRow] = {}
         self._values: Dict[str, Any] = {
-            spec.name: spec.default for spec in definition.specs
+            spec.name: spec.default for spec in self.specs
         }
         self._running = False
 
         self._build_ui()
         self.refresh_visibility()
+
+    # ==================================================================
+    # 默认值来源
+    # ==================================================================
+    def _apply_setting(self, spec: ParamSpec) -> ParamSpec:
+        """spec 声明了 setting 时，用全局设置的值作为本参数的默认值。
+
+        设置值为 None（如「目标码率」留空）时保留 spec 自身的 default，
+        这样「留空=自动」这类语义不会被设置里的空值顶掉。
+        """
+        if not spec.setting:
+            return spec
+        value = getattr(self.host.settings, spec.setting, None)
+        if value is None:
+            return spec
+        return replace(spec, default=value)
 
     # ==================================================================
     # UI 构建
@@ -208,7 +229,7 @@ class ToolPanel(QWidget):
         content_layout.setContentsMargins(2, 8, 12, 8)
         content_layout.setSpacing(0)
 
-        for spec in self.definition.specs:
+        for spec in self.specs:
             row = self._build_row(spec)
             self._rows[spec.name] = row
             content_layout.addWidget(row)
@@ -277,14 +298,14 @@ class ToolPanel(QWidget):
 
     def collect_values(self) -> Dict[str, Any]:
         values: Dict[str, Any] = {}
-        for spec in self.definition.specs:
+        for spec in self.specs:
             values[spec.name] = self._read_widget(spec)
         self._values = dict(values)
         return values
 
     def validate(self, values: Dict[str, Any]) -> List[str]:
         errors: List[str] = []
-        for spec in self.definition.specs:
+        for spec in self.specs:
             if spec.visible_when is not None and not spec.should_show(values):
                 continue
 
@@ -323,7 +344,7 @@ class ToolPanel(QWidget):
 
     def mark_errors(self, values: Dict[str, Any]) -> None:
         """把校验失败的参数标红。"""
-        for spec in self.definition.specs:
+        for spec in self.specs:
             row = self._rows.get(spec.name)
             if row is None:
                 continue
@@ -353,7 +374,7 @@ class ToolPanel(QWidget):
 
     def refresh_visibility(self) -> None:
         """根据当前值切换条件字段的显隐。"""
-        for spec in self.definition.specs:
+        for spec in self.specs:
             if spec.visible_when is None:
                 continue
             row = self._rows.get(spec.name)
@@ -361,11 +382,11 @@ class ToolPanel(QWidget):
                 row.setVisible(spec.should_show(self._values))
 
     def reset_params(self) -> None:
-        for spec in self.definition.specs:
+        for spec in self.specs:
             row = self._rows.get(spec.name)
             if row is not None:
                 row.set_value(spec.default)
-        self._values = {s.name: s.default for s in self.definition.specs}
+        self._values = {s.name: s.default for s in self.specs}
         self.refresh_visibility()
 
     def fill_value(self, name: str, value: Any) -> bool:
@@ -439,7 +460,7 @@ class ToolPanel(QWidget):
         return self._running
 
     def on_result(self, result: TaskResult) -> None:
-        """任务结束时回调（主线程）。"""
+        """任务结尾时回调（主线程）。"""
         self.set_running(False)
         if result.outputs:
             self.host.log_message(

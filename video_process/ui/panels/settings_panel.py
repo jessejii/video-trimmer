@@ -64,6 +64,8 @@ class SettingsPanel(ToolPanel):
             self.set_running(False)
 
         if ok:
+            # 其他面板的默认值来自这份设置，重建让改动立刻可见
+            self.host.reload_panels(keep=self)
             self._set_status("设置已保存", ok=True)
             self.host.notify("设置已保存", "information", timeout=3)
             self.host.log_message("全局设置已保存", LogLevel.SUCCESS)

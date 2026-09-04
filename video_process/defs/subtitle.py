@@ -96,7 +96,7 @@ SRT_REMOVE = ToolDefinition(
             kind="text",
             default="",
             validator=validate_segments,
-            help="格式 开始-结束,开始-结束",
+            help="格式 开始-结尾,开始-结尾",
         ),
         ParamSpec(
             name="output_file",
@@ -181,6 +181,7 @@ JIANYING = ToolDefinition(
             default=True,
             required=False,
             help="输入为草稿库根目录时生效",
+            setting="recursive_scan",
         ),
         ParamSpec(
             name="output_dir",
@@ -229,6 +230,7 @@ BCUT = ToolDefinition(
             default=True,
             required=False,
             help="输入为草稿库根目录时生效",
+            setting="recursive_scan",
         ),
         ParamSpec(
             name="output_dir",

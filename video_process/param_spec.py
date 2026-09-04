@@ -35,6 +35,9 @@ class ParamSpec:
     validator: Optional[Callable[[Any], Optional[str]]] = None
     # 多行文本输入（如时间线计算器的时间线内容）
     multiline: bool = False
+    # 默认值来源：指定 Settings 的同名字段后，界面用该设置值作为本参数默认值。
+    # 不指定则沿用 default（Settings 面板本身即如此，它直接读 host.settings）。
+    setting: Optional[str] = None
 
     # --------------------------------------------------------------
     def should_show(self, values: Dict[str, Any]) -> bool:
@@ -107,7 +110,7 @@ class ToolDefinition:
 
 
 def validate_segments(text: str) -> Optional[str]:
-    """时间段格式校验：至少包含一个 开始-结束 区间。"""
+    """时间段格式校验：至少包含一个 开始-结尾 区间。"""
     from .core.timeparse import parse_segments
 
     if not text or not text.strip():

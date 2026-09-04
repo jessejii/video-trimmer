@@ -20,6 +20,7 @@ from typing import List, Optional, Tuple
 from ..core.models import TaskResult, ToolContext
 from ..core.paths import validate_path
 from ..core.textio import read_text
+from ..core.timeparse import format_srt_time
 
 # SRT 标准时间戳: 00:00:20,000 --> 00:00:22,000
 _TIME_PATTERN = re.compile(
@@ -66,19 +67,6 @@ def parse_clock_to_ms(time_str: str) -> int:
     raise SrtError(f"无效时间格式: {time_str}")
 
 
-def ms_to_srt(ms: int) -> str:
-    """毫秒 -> HH:MM:SS,mmm"""
-    if ms < 0:
-        ms = 0
-    h = ms // 3_600_000
-    ms %= 3_600_000
-    m = ms // 60_000
-    ms %= 60_000
-    s = ms // 1000
-    ms %= 1000
-    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
-
-
 def parse_remove_ranges(spec: str) -> List[Tuple[int, int]]:
     """解析删除区间字符串，返回合并后的毫秒区间列表。"""
     ranges: List[Tuple[int, int]] = []
@@ -91,7 +79,7 @@ def parse_remove_ranges(spec: str) -> List[Tuple[int, int]]:
         start = parse_clock_to_ms(a)
         end = parse_clock_to_ms(b)
         if start >= end:
-            raise SrtError(f"无效区间（开始 >= 结束）: {part}")
+            raise SrtError(f"无效区间（开始 >= 结尾）: {part}")
         ranges.append((start, end))
 
     if not ranges:
@@ -204,7 +192,7 @@ def write_srt(cues: List[Cue], path: str) -> None:
     with open(path, "w", encoding="utf-8") as fh:
         for idx, cue in enumerate(cues, start=1):
             fh.write(f"{idx}\n")
-            fh.write(f"{ms_to_srt(cue.start_ms)} --> {ms_to_srt(cue.end_ms)}\n")
+            fh.write(f"{format_srt_time(cue.start_ms)} --> {format_srt_time(cue.end_ms)}\n")
             fh.write(cue.text.rstrip("\n"))
             fh.write("\n\n")
 
@@ -259,7 +247,7 @@ def remove_srt_segments(
     except OSError as exc:
         return TaskResult(success=False, message=f"写入失败: {exc}")
 
-    ctx.log(f"删除区间: {', '.join(f'{ms_to_srt(s)}-{ms_to_srt(e)}' for s, e in ranges)}")
+    ctx.log(f"删除区间: {', '.join(f'{format_srt_time(s)}-{format_srt_time(e)}' for s, e in ranges)}")
     ctx.success(f"原字幕 {len(cues)} 条 -> 新字幕 {len(new_cues)} 条")
     ctx.success(f"输出文件: {out}")
 
