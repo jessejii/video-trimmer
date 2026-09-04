@@ -141,10 +141,10 @@ def main():
     check("字幕同步产物存在", os.path.exists(os.path.join(WORK, "a_processed.srt")))
 
     # ---------- 5. extract_segments ----------
-    print("\n[5] 片段提取（提取 2s-4s 与 6s-结尾）")
+    print("\n[5] 片段提取（提取 开头-2s 与 6s-结尾）")
     from video_process.tools.extract_segments import extract_segments
     ed = os.path.join(WORK, "extract")
-    r = extract_segments(src1, segments="2-4,6-结尾", output_dir=ed, ctx=mkctx())
+    r = extract_segments(src1, segments="开头-2,6-结尾", output_dir=ed, ctx=mkctx())
     check("extract_segments 成功", r.success, r.message)
     check("extract 输出 2 个片段", len(r.outputs) == 2, f"(实际 {len(r.outputs)})")
     if len(r.outputs) == 2:

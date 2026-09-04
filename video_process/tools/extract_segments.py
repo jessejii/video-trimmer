@@ -121,7 +121,7 @@ def extract_segments(
 
     参数:
         input_path: 输入视频文件
-        segments:   提取时间段，如 "1:00-2:00,5:00-结尾"，支持"结尾"关键字
+        segments:   提取时间段，如 "开头-2:00,5:00-结尾"，支持"开头"/"结尾"关键字
         output_dir: 输出文件夹，空表示输入同目录
         mode:       "fast" 或 "amd"
     """

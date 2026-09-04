@@ -2,9 +2,10 @@
 """时间解析与格式化。
 
 原项目在 7 个文件里重复实现了 parse_time()，且语义有微妙差异。
-此处统一为一份实现，并额外支持毫秒与"结尾"关键字。
+此处统一为一份实现，并额外支持毫秒与"开头"/"结尾"关键字。
 
 支持格式:
+    开头                         -> 0.0
     SS              90          -> 90.0
     SS.mmm          90.5        -> 90.5
     MM:SS           1:30        -> 90.0
@@ -15,6 +16,7 @@
 "结尾"的双向处理（参照原 remove_segments.py）:
     解析方向: "结尾" -> 视频总时长（duration），见 parse_time / parse_segments
     展示方向: 秒数 ≈ 视频总时长 -> "结尾"，见 format_seconds(use_end_label=True)
+"开头"只做单向解析（-> 0.0）：展示端没有等价需求，0:00 本身就足够直观。
 注意：反向展示只用于日志；传给字幕同步等下游的 CSV 必须是纯数值格式。
 """
 
@@ -23,6 +25,8 @@ from __future__ import annotations
 import math
 from typing import List, Optional, Tuple
 
+START_KEYWORD = "开头"
+START_ALIASES = (START_KEYWORD, "start")
 END_KEYWORD = "结尾"
 END_ALIASES = (END_KEYWORD, "end")
 # 判定"某个时间点是否就是视频末尾"的容差（秒）。
@@ -34,12 +38,21 @@ class TimeParseError(ValueError):
     """时间格式解析失败。"""
 
 
+def _normalize(text) -> str:
+    """去空白、去包裹引号、转小写，用于关键字比对。"""
+    if text is None:
+        return ""
+    return str(text).strip().strip('"').strip("'").lower()
+
+
+def is_start_keyword(text) -> bool:
+    """输入是否为"开头"关键字（忽略大小写与包裹引号）。"""
+    return _normalize(text) in START_ALIASES
+
+
 def is_end_keyword(text) -> bool:
     """输入是否为"结尾"关键字（忽略大小写与包裹引号）。"""
-    if text is None:
-        return False
-    s = str(text).strip().strip('"').strip("'").lower()
-    return s in END_ALIASES
+    return _normalize(text) in END_ALIASES
 
 
 def is_at_end(seconds: Optional[float], duration: Optional[float]) -> bool:
@@ -74,6 +87,9 @@ def parse_time(
 
     s = str(time_str).strip().strip('"').strip("'")
     if not s:
+        return 0.0
+
+    if is_start_keyword(s):
         return 0.0
 
     if is_end_keyword(s):
@@ -157,8 +173,8 @@ def parse_segments(
     """解析时间段字符串。
 
     参数:
-        spec:     如 "1:00-2:00,5:00-结尾"
-        duration: 视频总时长，用于解析"结尾"
+        spec:     如 "开头-2:00,5:00-结尾"
+        duration: 视频总时长，用于解析"结尾"（"开头"恒为 0，不需要时长）
 
     返回:
         (时间段列表, 警告列表)。非法段被跳过并记录警告，而非直接打印。

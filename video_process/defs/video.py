@@ -239,7 +239,7 @@ REMOVE_SEGMENTS = ToolDefinition(
     group=GROUP,
     description=(
         "删除视频中的一个或多个时间段，自动合并剩余部分。\n"
-        "示例: 1:00-2:00,5:00-6:00 或 1:00:00-结尾\n"
+        "示例: 开头-1:00,5:00-6:00 或 1:00:00-结尾\n"
         "未指定输出文件夹时，生成 {原名}_processed.mp4（原文件保留）。"
     ),
     specs=[
@@ -256,7 +256,7 @@ REMOVE_SEGMENTS = ToolDefinition(
             kind="text",
             default="",
             validator=validate_segments,
-            help="格式 开始-结尾,开始-结尾；时间支持 90 / 1:30 / 1:30:45 / 结尾",
+            help="格式 开始-结尾,开始-结尾；时间支持 开头 / 90 / 1:30 / 1:30:45 / 结尾",
         ),
         ParamSpec(
             name="output_dir",
@@ -286,7 +286,7 @@ EXTRACT_SEGMENTS = ToolDefinition(
     group=GROUP,
     description=(
         "提取视频中的多个时间段，每个段输出为独立文件。\n"
-        "示例: 1:00-2:00,5:00-结尾\n"
+        "示例: 开头-1:00,5:00-结尾\n"
         "输出命名: {原名}_{序号}_{开始}-{结尾}.mp4"
     ),
     specs=[
@@ -303,7 +303,7 @@ EXTRACT_SEGMENTS = ToolDefinition(
             kind="text",
             default="",
             validator=validate_segments,
-            help="格式 开始-结尾,开始-结尾；支持 结尾 表示到视频末尾",
+            help="格式 开始-结尾,开始-结尾；支持 开头（=0:00）/ 结尾（=视频末尾）",
         ),
         ParamSpec(
             name="output_dir",

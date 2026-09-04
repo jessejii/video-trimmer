@@ -303,7 +303,7 @@ def remove_segments(
 
     参数:
         input_path: 输入视频文件或文件夹
-        segments:   删除时间段，如 "1:00-2:00,5:00-6:00"，支持"结尾"关键字
+        segments:   删除时间段，如 "开头-1:00,5:00-6:00"，支持"开头"/"结尾"关键字
         output_dir: 输出文件夹，空表示输出到输入同目录（生成 _processed.mp4）
         sync_srt:   是否自动同步同名 SRT 字幕
     """
