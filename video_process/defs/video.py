@@ -240,6 +240,8 @@ REMOVE_SEGMENTS = ToolDefinition(
     description=(
         "删除视频中的一个或多个时间段，自动合并剩余部分。\n"
         "示例: 开头-1:00,5:00-6:00 或 1:00:00-结尾\n"
+        "  · 快速无损：流复制，秒级完成，切点对齐关键帧\n"
+        "  · AMD 硬件加速：AMF 重编码，帧级精确\n"
         "未指定输出文件夹时，生成 {原名}_processed.mp4（原文件保留）。"
     ),
     specs=[
@@ -266,6 +268,18 @@ REMOVE_SEGMENTS = ToolDefinition(
             required=False,
             help="留空=输出到输入同目录",
         ),
+        ParamSpec(
+            name="mode",
+            label="删除模式",
+            kind="choice",
+            default="fast",
+            choices=[
+                ("快速无损（流复制，秒级完成）", "fast"),
+                ("AMD 硬件加速（AMF 重编码，帧级精确）", "amd"),
+            ],
+            help="快速模式切点对齐关键帧；AMD 模式帧级精确，可指定质量与码率",
+        ),
+        *amd_specs(),
         ParamSpec(
             name="sync_srt",
             label="自动同步同名 SRT 字幕",

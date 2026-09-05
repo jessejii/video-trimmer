@@ -140,6 +140,20 @@ def main():
         check("删除后时长 ≈ 8s", 7.0 < d < 9.5, f"(实际 {d:.2f}s)")
     check("字幕同步产物存在", os.path.exists(os.path.join(WORK, "a_processed.srt")))
 
+    if check_amf_support():
+        print("\n[4b] 片段删除 AMD 模式（删 3s-5s 与 8s-10s）")
+        rad = os.path.join(WORK, "remove-amd")
+        os.makedirs(rad)
+        shutil.copy(src1, os.path.join(rad, "a.mp4"))
+        r = remove_segments(os.path.join(rad, "a.mp4"), segments="3-5,8-10",
+                            mode="amd", sync_srt=False, ctx=mkctx())
+        check("remove_segments AMD 模式成功", r.success, r.message)
+        amd_proc = os.path.join(rad, "a_processed.mp4")
+        check("remove AMD 输出 _processed.mp4", os.path.exists(amd_proc))
+        if os.path.exists(amd_proc):
+            d = duration_of(amd_proc)
+            check("remove AMD 删除后时长 ≈ 8s", 7.5 < d < 8.6, f"(实际 {d:.2f}s)")
+
     # ---------- 5. extract_segments ----------
     print("\n[5] 片段提取（提取 开头-2s 与 6s-结尾）")
     from video_process.tools.extract_segments import extract_segments

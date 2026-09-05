@@ -3,12 +3,16 @@
 
 移植自 remove_segments.py。核心流程：
     1. 解析删除区间 -> calculate_keep_segments 反算保留区间
-    2. 单个保留段：直接 copy 裁剪
-       多个保留段：逐段提取（.ts 源用 TS 中间格式，其他用 MP4）后 concat 合并
+    2. 单个保留段：直接裁剪
+       多个保留段：逐段提取（TS 中间格式）后 concat 合并
     3. 【关键】用输出文件的**实际时长**反算真实删除边界，同步同名 SRT 字幕
 
 第 3 步是原项目的精髓：copy 裁剪会对齐关键帧，实际边界与请求边界有偏差，
 必须以实际边界去同步字幕，否则字幕会越走越偏。
+
+两种模式（与「批量裁剪」一致）：
+    fast: 流复制（-c copy），无损、秒级完成，切点对齐关键帧
+    amd:  AMD AMF 硬件重编码，帧级精确，可指定质量预设与码率；音频仍为 copy
 
 输出策略：
     - 指定 output_dir：直接输出到该目录
@@ -22,6 +26,7 @@ import tempfile
 import time
 from typing import List, Optional, Tuple
 
+from ..core.amf import build_encode_args, require_amf
 from ..core.ffmpeg import FFmpegRunner
 from ..core.models import TaskResult, ToolContext, ToolError
 from ..core.paths import (
@@ -112,12 +117,64 @@ def _compute_actual_removed(
     return segments_to_csv(removed)
 
 
+def _amd_encode_args(
+    ctx: ToolContext,
+    input_file: str,
+    quality: str = "balanced",
+    usage: str = "transcoding",
+    bitrate: Optional[int] = None,
+    cqp: bool = False,
+    qp: int = 22,
+) -> List[str]:
+    """构造 AMF 视频编码参数段（每个文件只构造一次，避免重复探测）。"""
+    return build_encode_args(
+        ctx, input_file, quality=quality, usage=usage,
+        bitrate=bitrate, cqp=cqp, qp=qp,
+    )
+
+
+def _segment_cmd(
+    input_file: str,
+    start: float,
+    seg_duration: float,
+    out_file: str,
+    enc_args: Optional[List[str]] = None,
+) -> List[str]:
+    """构造「提取一个保留片段到 TS」的命令。
+
+    enc_args 为 None -> 快速无损（copy）；否则 -> AMF 重编码（帧级精确）。
+    两种模式都输出 TS 中间流：直接对 MP4 做 -ss + copy 会让视频轨退到上一个
+    关键帧而音频轨精确 seek，造成音画不同步与时长漂移。
+    """
+    if enc_args is None:
+        return [
+            "ffmpeg", "-y", "-i", input_file,
+            "-ss", str(start), "-t", str(seg_duration), "-c", "copy",
+            "-bsf:v", "h264_mp4toannexb", "-f", "mpegts",
+            "-avoid_negative_ts", "make_zero", out_file,
+        ]
+    return [
+        "ffmpeg", "-y",
+        "-hwaccel", "amf", "-hwaccel_output_format", "d3d11",
+        "-i", input_file,
+        "-ss", str(start), "-t", str(seg_duration),
+        *enc_args, "-c:a", "copy",
+        "-f", "mpegts", "-avoid_negative_ts", "make_zero", out_file,
+    ]
+
+
 def _remove_one(
     runner: FFmpegRunner,
     input_file: str,
     remove_segs: List[Tuple[float, float]],
     output_dir: Optional[str],
     sync_srt: bool = True,
+    mode: str = "fast",
+    quality: str = "balanced",
+    usage: str = "transcoding",
+    bitrate: Optional[int] = None,
+    cqp: bool = False,
+    qp: int = 22,
 ) -> Tuple[bool, List[str]]:
     """处理单个文件，返回 (是否成功, 输出文件列表)。"""
     ctx = runner.ctx
@@ -163,38 +220,64 @@ def _remove_one(
 
     outputs: List[str] = []
 
+    amd = mode == "amd"
+    enc_args: Optional[List[str]] = None
+    if amd:
+        enc_args = _amd_encode_args(ctx, input_file, quality, usage,
+                                    bitrate, cqp, qp)
+
     # ================= 情况 A：只有一个保留段 =================
     if len(keep_segments) == 1:
         start, end = keep_segments[0]
         seg_duration = end - start
 
-        # 同样走 TS 中间流：直接对 MP4 做 -ss + copy 会让视频轨退到上一个
-        # 关键帧而音频轨精确 seek，造成音画不同步与时长漂移。
-        temp_dir = temp_dir_for(input_dir, "trimmed")
-        temp_ts = os.path.join(temp_dir, f"{base_name}_single.ts")
-        ctx.log("  单个保留段，TS 中间格式裁剪...")
-        try:
-            runner.run(
-                ["ffmpeg", "-y", "-i", input_file,
-                 "-ss", str(start), "-t", str(seg_duration), "-c", "copy",
-                 "-bsf:v", "h264_mp4toannexb", "-f", "mpegts",
-                 "-avoid_negative_ts", "make_zero", temp_ts],
-                duration=seg_duration,
-                description="  步骤1/2: 转 TS 并裁剪...",
-            )
-            runner.run(
-                ["ffmpeg", "-y", "-i", temp_ts, "-c", "copy",
-                 "-bsf:a", "aac_adtstoasc", "-movflags", "+faststart",
-                 output_file],
-                description="  步骤2/2: remux 为 MP4...",
-            )
-        except ToolError as exc:
-            ctx.error(f"  裁剪失败: {exc}")
-            remove_files([output_file])
-            return False, []
-        finally:
-            remove_files([temp_ts])
-            cleanup_dir(temp_dir)
+        if amd:
+            # 重编码本身就是帧级精确，无需 TS 中间流，一步直出 MP4
+            ctx.log("  单个保留段，AMD AMF 重编码（帧级精确）...")
+            try:
+                runner.run(
+                    ["ffmpeg", "-y",
+                     "-hwaccel", "amf", "-hwaccel_output_format", "d3d11",
+                     "-i", input_file,
+                     "-ss", str(start), "-t", str(seg_duration),
+                     *enc_args, "-c:a", "copy",
+                     "-avoid_negative_ts", "make_zero",
+                     "-movflags", "+faststart", output_file],
+                    duration=seg_duration,
+                    description="  AMD 重编码裁剪中...",
+                )
+            except ToolError as exc:
+                ctx.error(f"  裁剪失败: {exc}")
+                remove_files([output_file])
+                return False, []
+        else:
+            # 同样走 TS 中间流：直接对 MP4 做 -ss + copy 会让视频轨退到上一个
+            # 关键帧而音频轨精确 seek，造成音画不同步与时长漂移。
+            temp_dir = temp_dir_for(input_dir, "trimmed")
+            temp_ts = os.path.join(temp_dir, f"{base_name}_single.ts")
+            ctx.log("  单个保留段，TS 中间格式裁剪...")
+            try:
+                runner.run(
+                    ["ffmpeg", "-y", "-i", input_file,
+                     "-ss", str(start), "-t", str(seg_duration), "-c", "copy",
+                     "-bsf:v", "h264_mp4toannexb", "-f", "mpegts",
+                     "-avoid_negative_ts", "make_zero", temp_ts],
+                    duration=seg_duration,
+                    description="  步骤1/2: 转 TS 并裁剪...",
+                )
+                runner.run(
+                    ["ffmpeg", "-y", "-i", temp_ts, "-c", "copy",
+                     "-bsf:a", "aac_adtstoasc", "-movflags", "+faststart",
+                     output_file],
+                    description="  步骤2/2: remux 为 MP4...",
+                )
+            except ToolError as exc:
+                ctx.error(f"  裁剪失败: {exc}")
+                remove_files([output_file])
+                return False, []
+            finally:
+                remove_files([temp_ts])
+                cleanup_dir(temp_dir)
 
         actual = get_duration(output_file)
         actual_dur = actual if actual is not None else seg_duration
@@ -224,17 +307,17 @@ def _remove_one(
     concat_list = os.path.join(temp_dir, f"{base_name}_concat_list.txt")
 
     try:
-        ctx.log(f"  多个保留段（{len(keep_segments)} 段），TS 中间格式提取...")
+        ctx.log(
+            f"  多个保留段（{len(keep_segments)} 段），"
+            f"{'AMD AMF 重编码' if amd else 'TS 中间格式'}提取..."
+        )
 
         for i, (start, end) in enumerate(keep_segments):
             ctx.check_cancel()
             seg_file = os.path.join(temp_dir, f"segment_{i:03d}.ts")
             seg_duration = end - start
-            cmd = ["ffmpeg", "-y", "-i", input_file,
-                   "-ss", str(start), "-t", str(seg_duration), "-c", "copy",
-                   "-bsf:v", "h264_mp4toannexb",
-                   "-f", "mpegts",
-                   "-avoid_negative_ts", "make_zero", seg_file]
+            cmd = _segment_cmd(input_file, start, seg_duration, seg_file,
+                               enc_args)
 
             runner.run(cmd, duration=seg_duration,
                        description=f"  提取片段 {i + 1}/{len(keep_segments)}: "
@@ -296,6 +379,12 @@ def remove_segments(
     input_path: str,
     segments: str,
     output_dir: str = "",
+    mode: str = "fast",
+    quality: str = "balanced",
+    usage: str = "transcoding",
+    bitrate: Optional[int] = None,
+    cqp: bool = False,
+    qp: int = 22,
     sync_srt: bool = True,
     ctx: Optional[ToolContext] = None,
 ) -> TaskResult:
@@ -305,10 +394,18 @@ def remove_segments(
         input_path: 输入视频文件或文件夹
         segments:   删除时间段，如 "开头-1:00,5:00-6:00"，支持"开头"/"结尾"关键字
         output_dir: 输出文件夹，空表示输出到输入同目录（生成 _processed.mp4）
+        mode:       "fast"（流复制，切点对齐关键帧）或 "amd"（AMF 重编码，帧级精确）
+        quality/usage/bitrate/cqp/qp: 仅 AMD 模式生效的编码参数
         sync_srt:   是否自动同步同名 SRT 字幕
     """
     ctx = ctx or ToolContext()
     runner = FFmpegRunner(ctx)
+
+    if mode == "amd":
+        try:
+            require_amf(ctx)
+        except RuntimeError as exc:
+            return TaskResult(success=False, message=str(exc))
 
     ok, resolved, err = validate_path(input_path)
     if not ok:
@@ -323,6 +420,11 @@ def remove_segments(
         return TaskResult(success=False, message="没有有效的时间段需要删除")
 
     ctx.log(f"要删除的时间段: {segments_to_csv(segs, duration, use_end_label=True)}")
+    ctx.log(
+        "删除模式: "
+        + ("AMD 硬件加速（AMF 重编码，帧级精确）" if mode == "amd"
+           else "快速无损（流复制，切点对齐关键帧）")
+    )
 
     outputs: List[str] = []
     success = 0
@@ -330,7 +432,9 @@ def remove_segments(
 
     if os.path.isfile(resolved):
         ctx.log(f"处理: {os.path.basename(resolved)}")
-        ok_one, outs = _remove_one(runner, resolved, segs, output_dir or None, sync_srt)
+        ok_one, outs = _remove_one(runner, resolved, segs, output_dir or None,
+                                   sync_srt, mode, quality, usage, bitrate,
+                                   cqp, qp)
         outputs.extend(outs)
         success += int(ok_one)
         failed += int(not ok_one)
@@ -358,7 +462,8 @@ def remove_segments(
                 failed += 1
                 continue
             ctx.log(f"  要删除: {segments_to_csv(file_segs, d, use_end_label=True)}")
-            ok_one, outs = _remove_one(runner, f, file_segs, out_dir, sync_srt)
+            ok_one, outs = _remove_one(runner, f, file_segs, out_dir, sync_srt,
+                                       mode, quality, usage, bitrate, cqp, qp)
             outputs.extend(outs)
             success += int(ok_one)
             failed += int(not ok_one)
